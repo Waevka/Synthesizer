@@ -15,6 +15,16 @@ public class GenerateSound : MonoBehaviour {
     FMOD.DSP fft;
     const int windowSize = 1024;
 
+    FMOD.CREATESOUNDEXINFO soundInfo;
+    FMOD.Sound generatedSound;
+    int sampleRate = 44100;
+    int channels = 2;
+    int soundLength = 5; //sec
+    bool sampleCreated = false; //temp
+    int frequency = 800; //Hz
+    float volume = 0.2f; // 1-0
+    int samplesGenerated = 0;
+
     LineRenderer lineRenderer;
 
     // Use this for initialization
@@ -53,8 +63,23 @@ public class GenerateSound : MonoBehaviour {
         lowlevelSystem.createSound("Assets\\Sounds\\test2.mp3", FMOD.MODE.DEFAULT, out sound);
         sound.getName(out nametest, 20);
         UnityEngine.Debug.Log(nametest);
-        lowlevelSystem.playSound(sound, channelGroup, false, out channel);
-        
+
+        createSample();
+
+        //debug
+        if (sampleCreated)
+        {
+            lowlevelSystem.playSound(generatedSound, channelGroup, false, out channel);
+
+        } else
+        {
+            lowlevelSystem.playSound(sound, channelGroup, true, out channel);
+            channel.setLoopCount(-1);
+            channel.setMode(MODE.LOOP_NORMAL);
+            channel.setPosition(0, TIMEUNIT.MS);
+            channel.setPaused(false);
+        } 
+
     }
 	
 	// Update is called once per frame
@@ -68,10 +93,11 @@ public class GenerateSound : MonoBehaviour {
             (FMOD.DSP_PARAMETER_FFT)System.Runtime.InteropServices.Marshal.PtrToStructure(unmanagedData, typeof(FMOD.DSP_PARAMETER_FFT));
         var spectrum = fftData.spectrum;
 
+        UnityEngine.Debug.Log("Number of channels in track:" + fftData.numchannels);
+
         //Wrzucamy dane do linerenderera
-        if(fftData.numchannels > 0)
+        if (fftData.numchannels > 0)
         {
-            UnityEngine.Debug.Log("Number of channels in track:" + fftData.numchannels);
             float width = 80.0f;
             float height = 0.1f;
             var pos = Vector3.zero;
@@ -89,6 +115,68 @@ public class GenerateSound : MonoBehaviour {
             }
         }
     }
+
+    void createSample()
+    {
+        soundInfo = new FMOD.CREATESOUNDEXINFO();
+        soundInfo.cbsize = System.Runtime.InteropServices.Marshal.SizeOf(soundInfo);
+        soundInfo.decodebuffersize = (uint)sampleRate;
+
+        // Sample rate * number of channels * bits per sample per channel * number of seconds
+        soundInfo.length = (uint)(sampleRate * channels * sizeof(short) * soundLength);
+        //UnityEngine.Debug.Log(soundInfo.length);
+        soundInfo.numchannels = channels;
+        soundInfo.defaultfrequency = sampleRate;
+        soundInfo.format = SOUND_FORMAT.PCM16;
+        soundInfo.pcmreadcallback = PCMReadCallbackImpl;
+        soundInfo.pcmsetposcallback = PCMSetPosCallbackImpl;
+
+        //zwiekszenie bufora
+        lowlevelSystem.setStreamBufferSize(65536, TIMEUNIT.RAWBYTES);
+        lowlevelSystem.createStream("generatedSound", MODE.OPENUSER, ref soundInfo, out generatedSound);
+        //sampleCreated = true;
+        
+    }
+    private RESULT PCMReadCallbackImpl(IntPtr soundraw, IntPtr data, uint length)
+    {
+        Int16[] buffer = new Int16[length/4];
+        UnityEngine.Debug.Log("Samples length:" +  length + ", short size:" + sizeof(Int16));
+        int i = 0;
+        for (i = 0; i < length / 4; i++)
+        {
+            //pozycja w probce
+            double position = frequency * (float)samplesGenerated / (float)sampleRate;
+
+            try
+            {
+                var currentPtr = new IntPtr(data.ToInt32() + (i * sizeof(Int16)));
+                buffer[i] = (Int16)System.Runtime.InteropServices.Marshal.PtrToStructure(
+                currentPtr, typeof(Int16));
+                if (i == 2) buffer[i] = 666;
+            } catch (NullReferenceException nre)
+            {
+                UnityEngine.Debug.Log("Samples broke at sample:" + i);
+                throw new NullReferenceException(nre.Message);
+            }
+
+            //zamiana z -1 - 1 na zakres 16bit (+/-32767)
+            //buffer
+        }
+
+        UnityEngine.Debug.Log("Finished at sample no. " + i);
+        System.Runtime.InteropServices.Marshal.Copy(buffer, 0, data, (int)(length/4));
+        var currentPtr2 = new IntPtr(data.ToInt32() + (2 * sizeof(Int16)));
+        var test = (Int16)System.Runtime.InteropServices.Marshal.PtrToStructure(
+        currentPtr2, typeof(Int16));
+
+        UnityEngine.Debug.Log("sample test: buffer[2] = " + test);
+        return FMOD.RESULT.OK;
+    }
+    private RESULT PCMSetPosCallbackImpl(IntPtr soundraw, int subsound, uint position, TIMEUNIT postype)
+    {
+        return FMOD.RESULT.OK;
+    }
+
     float Lin2dB(float linear)
     {
         return Mathf.Clamp(Mathf.Log10(linear) * 20.0f, -80.0f, 0.0f);
