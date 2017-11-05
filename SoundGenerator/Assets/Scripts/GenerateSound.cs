@@ -70,6 +70,10 @@ public class GenerateSound : MonoBehaviour {
         if (sampleCreated)
         {
             lowlevelSystem.playSound(generatedSound, channelGroup, false, out channel);
+            channel.setLoopCount(-1);
+            channel.setMode(MODE.LOOP_NORMAL);
+            channel.setPosition(0, TIMEUNIT.MS);
+            channel.setPaused(false);
 
         } else
         {
@@ -93,7 +97,7 @@ public class GenerateSound : MonoBehaviour {
             (FMOD.DSP_PARAMETER_FFT)System.Runtime.InteropServices.Marshal.PtrToStructure(unmanagedData, typeof(FMOD.DSP_PARAMETER_FFT));
         var spectrum = fftData.spectrum;
 
-        UnityEngine.Debug.Log("Number of channels in track:" + fftData.numchannels);
+        //UnityEngine.Debug.Log("Number of channels in track:" + fftData.numchannels);
 
         //Wrzucamy dane do linerenderera
         if (fftData.numchannels > 0)
@@ -134,7 +138,7 @@ public class GenerateSound : MonoBehaviour {
         //zwiekszenie bufora
         lowlevelSystem.setStreamBufferSize(65536, TIMEUNIT.RAWBYTES);
         lowlevelSystem.createStream("generatedSound", MODE.OPENUSER, ref soundInfo, out generatedSound);
-        //sampleCreated = true;
+        sampleCreated = true;
         
     }
     private RESULT PCMReadCallbackImpl(IntPtr soundraw, IntPtr data, uint length)
@@ -152,7 +156,7 @@ public class GenerateSound : MonoBehaviour {
                 var currentPtr = new IntPtr(data.ToInt32() + (i * sizeof(Int16)));
                 buffer[i] = (Int16)System.Runtime.InteropServices.Marshal.PtrToStructure(
                 currentPtr, typeof(Int16));
-                if (i == 2) buffer[i] = 666;
+                buffer[i] = 15000;
             } catch (NullReferenceException nre)
             {
                 UnityEngine.Debug.Log("Samples broke at sample:" + i);
@@ -165,11 +169,14 @@ public class GenerateSound : MonoBehaviour {
 
         UnityEngine.Debug.Log("Finished at sample no. " + i);
         System.Runtime.InteropServices.Marshal.Copy(buffer, 0, data, (int)(length/4));
-        var currentPtr2 = new IntPtr(data.ToInt32() + (2 * sizeof(Int16)));
+
+        //testing last table index to see if it copied OK
+        int testPointerIndex = (int)(length / 4) - 1;
+        var currentPtr2 = new IntPtr(data.ToInt32() + (testPointerIndex * sizeof(Int16)));
         var test = (Int16)System.Runtime.InteropServices.Marshal.PtrToStructure(
         currentPtr2, typeof(Int16));
 
-        UnityEngine.Debug.Log("sample test: buffer[2] = " + test);
+        UnityEngine.Debug.Log("sample test: buffer[" + testPointerIndex + "] = " + test);
         return FMOD.RESULT.OK;
     }
     private RESULT PCMSetPosCallbackImpl(IntPtr soundraw, int subsound, uint position, TIMEUNIT postype)
