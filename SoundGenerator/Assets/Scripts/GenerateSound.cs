@@ -17,7 +17,7 @@ public class GenerateSound : MonoBehaviour {
 
     FMOD.CREATESOUNDEXINFO soundInfo;
     FMOD.Sound generatedSound;
-    int sampleRate = 441;
+    int sampleRate = 44100;
     int channels = 2;
     int soundLength = 5; //sec
     bool sampleCreated = false; //temp
@@ -150,15 +150,16 @@ public class GenerateSound : MonoBehaviour {
         for (i = 0; i < length / sizeof(short); i += 2)
         {
             //pozycja w probce
-            double position = frequency * (float)samplesGenerated / (float)sampleRate;
+            float xd = (float)samplesGenerated / (float)sampleRate;
+            double position = frequency * xd;
 
             try
             {
                 var currentPtr = new IntPtr(data.ToInt32() + (i * sizeof(short)));
                 buffer[i] = (Int16)System.Runtime.InteropServices.Marshal.PtrToStructure(
                 currentPtr, typeof(Int16));
-                buffer[i] = 15000;
-                buffer[i + 1] = 8000;
+                buffer[i] = (short)(Math.Sin(position * Math.PI * 2) * 32767.0f * volume);
+                buffer[i + 1] = (short)(Math.Sin(position * Math.PI * 2) * 32767.0f * volume);
             }
             catch (NullReferenceException nre) {
                 UnityEngine.Debug.Log("Samples broke at sample:" + i);
@@ -170,15 +171,15 @@ public class GenerateSound : MonoBehaviour {
                 UnityEngine.Debug.Log("Samples broke at sample:" + i);
                 throw new NullReferenceException(ioore.Message);
             }
-
+            samplesGenerated++;
             //zamiana z -1 - 1 na zakres 16bit (+/-32767)
             //buffer
         }
 
         UnityEngine.Debug.Log("Finished at sample no. " + i);
-        System.Runtime.InteropServices.Marshal.Copy(buffer, 0, data, (int)(length/4));
+        System.Runtime.InteropServices.Marshal.Copy(buffer, 0, data, (int)(length/2));
 
-        for (i = 0; i < length / sizeof(short); i += 2)
+        for (i = 0; i < length / sizeof(short); i ++)
         {
             var currentPtr = new IntPtr(data.ToInt32() + (i * sizeof(short)));
             BUFFTEST2[i] = (Int16)System.Runtime.InteropServices.Marshal.PtrToStructure(
