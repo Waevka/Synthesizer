@@ -17,7 +17,7 @@ public class GenerateSound : MonoBehaviour {
 
     FMOD.CREATESOUNDEXINFO soundInfo;
     FMOD.Sound generatedSound;
-    int sampleRate = 44100;
+    int sampleRate = 441;
     int channels = 2;
     int soundLength = 5; //sec
     bool sampleCreated = false; //temp
@@ -143,24 +143,32 @@ public class GenerateSound : MonoBehaviour {
     }
     private RESULT PCMReadCallbackImpl(IntPtr soundraw, IntPtr data, uint length)
     {
-        Int16[] buffer = new Int16[length/4];
-        UnityEngine.Debug.Log("Samples length:" +  length + ", short size:" + sizeof(Int16));
+        short[] buffer = new short[length/sizeof(short)];
+        UnityEngine.Debug.Log("Samples length:" +  length + ", short size:" + sizeof(short));
         int i = 0;
-        for (i = 0; i < length / 4; i++)
+        short[] BUFFTEST2 = new short[length / sizeof(short)];
+        for (i = 0; i < length / sizeof(short); i += 2)
         {
             //pozycja w probce
             double position = frequency * (float)samplesGenerated / (float)sampleRate;
 
             try
             {
-                var currentPtr = new IntPtr(data.ToInt32() + (i * sizeof(Int16)));
+                var currentPtr = new IntPtr(data.ToInt32() + (i * sizeof(short)));
                 buffer[i] = (Int16)System.Runtime.InteropServices.Marshal.PtrToStructure(
                 currentPtr, typeof(Int16));
                 buffer[i] = 15000;
-            } catch (NullReferenceException nre)
-            {
+                buffer[i + 1] = 8000;
+            }
+            catch (NullReferenceException nre) {
                 UnityEngine.Debug.Log("Samples broke at sample:" + i);
                 throw new NullReferenceException(nre.Message);
+            }
+
+            catch (IndexOutOfRangeException ioore)
+            {
+                UnityEngine.Debug.Log("Samples broke at sample:" + i);
+                throw new NullReferenceException(ioore.Message);
             }
 
             //zamiana z -1 - 1 na zakres 16bit (+/-32767)
@@ -170,6 +178,12 @@ public class GenerateSound : MonoBehaviour {
         UnityEngine.Debug.Log("Finished at sample no. " + i);
         System.Runtime.InteropServices.Marshal.Copy(buffer, 0, data, (int)(length/4));
 
+        for (i = 0; i < length / sizeof(short); i += 2)
+        {
+            var currentPtr = new IntPtr(data.ToInt32() + (i * sizeof(short)));
+            BUFFTEST2[i] = (Int16)System.Runtime.InteropServices.Marshal.PtrToStructure(
+                currentPtr, typeof(Int16));
+        }
         //testing last table index to see if it copied OK
         int testPointerIndex = (int)(length / 4) - 1;
         var currentPtr2 = new IntPtr(data.ToInt32() + (testPointerIndex * sizeof(Int16)));
