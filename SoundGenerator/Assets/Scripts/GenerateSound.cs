@@ -142,22 +142,25 @@ public class GenerateSound : MonoBehaviour {
         
     }
     private RESULT PCMReadCallbackImpl(IntPtr soundraw, IntPtr data, uint length)
-    {
+    {   
+        //Tutaj przechowujemy probki
         short[] buffer = new short[length/sizeof(short)];
-        UnityEngine.Debug.Log("Samples length:" +  length + ", short size:" + sizeof(short));
+        //UnityEngine.Debug.Log("Samples length:" +  length + ", short size:" + sizeof(short));
         int i = 0;
-        short[] BUFFTEST2 = new short[length / sizeof(short)];
+
         for (i = 0; i < length / sizeof(short); i += 2)
         {
-            //pozycja w probce
-            float xd = (float)samplesGenerated / (float)sampleRate;
-            double position = frequency * xd;
+            //obecna pozycja w probce
+            double position = frequency * (float)samplesGenerated / (float)sampleRate;
 
             try
             {
+                //test dostepu pamieci
                 var currentPtr = new IntPtr(data.ToInt32() + (i * sizeof(short)));
-                buffer[i] = (Int16)System.Runtime.InteropServices.Marshal.PtrToStructure(
-                currentPtr, typeof(Int16));
+                buffer[i] = (short)System.Runtime.InteropServices.Marshal.PtrToStructure(
+                currentPtr, typeof(short));
+
+                //i - lewy kanal, i+1 - prawy
                 buffer[i] = (short)(Math.Sin(position * Math.PI * 2) * 32767.0f * volume);
                 buffer[i + 1] = (short)(Math.Sin(position * Math.PI * 2) * 32767.0f * volume);
             }
@@ -176,22 +179,30 @@ public class GenerateSound : MonoBehaviour {
             //buffer
         }
 
-        UnityEngine.Debug.Log("Finished at sample no. " + i);
-        System.Runtime.InteropServices.Marshal.Copy(buffer, 0, data, (int)(length/2));
+        //kopiujemy caly bufor do wskaznika data
+        System.Runtime.InteropServices.Marshal.Copy(buffer, 0, data, (int)(length / 2));
+
+        ///////////
+        //Testowanie ostatniej probki po skopiowaniu w dwie strony
+        //Odkomentuj jezeli masz problem ze sprawdzeniem poprawnych wartosci probek.
+        ///////////
+        /*UnityEngine.Debug.Log("Finished at sample no. " + i);
+        short[] BUFFTEST = new short[length / sizeof(short)]; //Do przegladania w visualu
+
 
         for (i = 0; i < length / sizeof(short); i ++)
         {
             var currentPtr = new IntPtr(data.ToInt32() + (i * sizeof(short)));
-            BUFFTEST2[i] = (Int16)System.Runtime.InteropServices.Marshal.PtrToStructure(
-                currentPtr, typeof(Int16));
+            BUFFTEST[i] = (short)System.Runtime.InteropServices.Marshal.PtrToStructure(
+                currentPtr, typeof(short));
         }
-        //testing last table index to see if it copied OK
-        int testPointerIndex = (int)(length / 4) - 1;
-        var currentPtr2 = new IntPtr(data.ToInt32() + (testPointerIndex * sizeof(Int16)));
-        var test = (Int16)System.Runtime.InteropServices.Marshal.PtrToStructure(
-        currentPtr2, typeof(Int16));
 
-        UnityEngine.Debug.Log("sample test: buffer[" + testPointerIndex + "] = " + test);
+        int testPointerIndex = (int)(length / 4) - 1;
+        var currentPtr2 = new IntPtr(data.ToInt32() + (testPointerIndex * sizeof(short)));
+        var test = (short)System.Runtime.InteropServices.Marshal.PtrToStructure(
+        currentPtr2, typeof(short));
+        UnityEngine.Debug.Log("sample test: buffer[" + testPointerIndex + "] = " + test);*/
+
         return FMOD.RESULT.OK;
     }
     private RESULT PCMSetPosCallbackImpl(IntPtr soundraw, int subsound, uint position, TIMEUNIT postype)
