@@ -7,6 +7,10 @@ using System;
 
 public class GenerateSound : MonoBehaviour {
 
+    public enum WaveType {SINE, TRIANGLE, SAW, SQUARE};
+    private delegate double GenerateSample(double position);
+    GenerateSample sampleGenerator;
+
     FMOD.Studio.System studioSystem;
     FMOD.System lowlevelSystem;
 
@@ -24,6 +28,7 @@ public class GenerateSound : MonoBehaviour {
     public int frequency { get; set; } //Hz
     float volume = 0.2f; // 1-0
     int samplesGenerated = 0;
+    bool debugDrawFFT = true; //false - draw sample instead
 
     LineRenderer lineRenderer;
 
@@ -31,6 +36,7 @@ public class GenerateSound : MonoBehaviour {
     void Start () {
 
         frequency = 800;
+        sampleGenerator = GenerateSineSample;
 
         //referencja do komponentow FMOD - wysokiego poziomu (studio) i niskiego
         studioSystem = FMODUnity.RuntimeManager.StudioSystem;
@@ -66,7 +72,7 @@ public class GenerateSound : MonoBehaviour {
         sound.getName(out nametest, 20);
         UnityEngine.Debug.Log(nametest);
 
-        createSample();
+        InitSampleGeneration();
 
         //debug
         if (sampleCreated)
@@ -87,42 +93,109 @@ public class GenerateSound : MonoBehaviour {
         } 
 
     }
-	
-	// Update is called once per frame
-	void Update () {
+
+    // Update is called once per frame
+    void Update () {
 
         IntPtr unmanagedData;
         uint length;
-        fft.getParameterData((int)FMOD.DSP_FFT.SPECTRUMDATA, out unmanagedData, out length);
-        //Musimy zrzutować dane z pointera unmanagedData na typ DSP_PARAMETER_FFT
-        FMOD.DSP_PARAMETER_FFT fftData = 
-            (FMOD.DSP_PARAMETER_FFT)System.Runtime.InteropServices.Marshal.PtrToStructure(unmanagedData, typeof(FMOD.DSP_PARAMETER_FFT));
-        var spectrum = fftData.spectrum;
-
-        //UnityEngine.Debug.Log("Number of channels in track:" + fftData.numchannels);
-
-        //Wrzucamy dane do linerenderera
-        if (fftData.numchannels > 0)
+        if (debugDrawFFT)
         {
-            float width = 80.0f;
-            float height = 0.1f;
-            var pos = Vector3.zero;
-            pos.x = width * -0.5f;
+            fft.getParameterData((int)FMOD.DSP_FFT.SPECTRUMDATA, out unmanagedData, out length);
+            //Musimy zrzutować dane z pointera unmanagedData na typ DSP_PARAMETER_FFT
+            FMOD.DSP_PARAMETER_FFT fftData =
+                (FMOD.DSP_PARAMETER_FFT)System.Runtime.InteropServices.Marshal.PtrToStructure(unmanagedData, typeof(FMOD.DSP_PARAMETER_FFT));
+            var spectrum = fftData.spectrum;
 
-            for (int i = 0; i < windowSize; ++i)
+            //UnityEngine.Debug.Log("Number of channels in track:" + fftData.numchannels);
+
+            //Wrzucamy dane do linerenderera
+            if (fftData.numchannels > 0)
             {
-                pos.x += (width / windowSize);
-                //Elementy tablicy spectrum zwracane sa w log dB
-                //TODO: fft w skali logarytmicznej a nie liniowej
-                float level = Lin2dB(spectrum[0][i]);
-                pos.y = (80 + level) * height;
+                float width = 80.0f;
+                float height = 0.1f;
+                var pos = Vector3.zero;
+                pos.x = width * -0.5f;
 
-                lineRenderer.SetPosition(i, pos);
+                for (int i = 0; i < windowSize; ++i)
+                {
+                    pos.x += (width / windowSize);
+                    //Elementy tablicy spectrum zwracane sa w log dB
+                    //TODO: fft w skali logarytmicznej a nie liniowej
+                    float level = Lin2dB(spectrum[0][i]);
+                    pos.y = (80 + level) * height;
+
+                    lineRenderer.SetPosition(i, pos);
+                }
             }
+        } else
+        {
+
         }
     }
 
-    void createSample()
+    internal void SetWaveType(WaveType wavetype)
+    {
+        switch (wavetype)
+        {
+            case WaveType.SINE:
+                sampleGenerator = GenerateSineSample;
+                break;
+            case WaveType.TRIANGLE:
+                sampleGenerator = GenerateTriangleSample;
+                break;
+            case WaveType.SAW:
+                sampleGenerator = GenerateSawSample;
+                break;
+            case WaveType.SQUARE:
+                sampleGenerator = GenerateSquareSample;
+                break;
+            default:
+                break;
+        }
+    }
+
+    private double GenerateSineSample(double position)
+    {
+        return Math.Sin(position * Math.PI * 2);
+    }
+
+    private double GenerateTriangleSample(double position)
+    {
+        if (position == 0)
+        {
+            return -1.0f;
+        } else if (position == 0.5d)
+        {
+            return 1.0f;
+        } else if(position < 0.5)
+        {
+            return (2.0d / (position*2)) - 1.0d;
+        } else
+        {
+            return (2.0d / (1.0d-(position*2))) - 1.0d; //not sure
+        }
+    }
+
+    private double GenerateSawSample(double position)
+    {
+        if(position == 0)
+        {
+            return -1.0f;
+        }
+        return (2.0d / position) - 1.0d;
+    }
+
+    private double GenerateSquareSample(double position)
+    {
+        if (position < 0.5d)
+        {
+            return 1.0d;
+        }
+        else return -1.0d;
+    }
+
+    void InitSampleGeneration()
     {
         soundInfo = new FMOD.CREATESOUNDEXINFO();
         soundInfo.cbsize = System.Runtime.InteropServices.Marshal.SizeOf(soundInfo);
@@ -149,11 +222,12 @@ public class GenerateSound : MonoBehaviour {
         short[] buffer = new short[length/sizeof(short)];
         //UnityEngine.Debug.Log("Samples length:" +  length + ", short size:" + sizeof(short));
         int i = 0;
+        samplesGenerated = 0;
 
         for (i = 0; i < length / sizeof(short); i += 2)
         {
             //obecna pozycja w probce
-            double position = frequency * (float)samplesGenerated / (float)sampleRate;
+            double position = frequency * (double)samplesGenerated / (double)sampleRate;
 
             try
             {
@@ -163,8 +237,8 @@ public class GenerateSound : MonoBehaviour {
                 currentPtr, typeof(short));
 
                 //i - lewy kanal, i+1 - prawy
-                buffer[i] = (short)(Math.Sin(position * Math.PI * 2) * 32767.0f * volume);
-                buffer[i + 1] = (short)(Math.Sin(position * Math.PI * 2) * 32767.0f * volume);
+                buffer[i] = (short)(sampleGenerator(position - Math.Floor(position)) * 32767.0f * volume);
+                buffer[i + 1] = (short)(sampleGenerator(position - Math.Floor(position)) * 32767.0f * volume);
             }
             catch (NullReferenceException nre) {
                 UnityEngine.Debug.Log("Samples broke at sample:" + i);
@@ -188,8 +262,8 @@ public class GenerateSound : MonoBehaviour {
         //Testowanie ostatniej probki po skopiowaniu w dwie strony
         //Odkomentuj jezeli masz problem ze sprawdzeniem poprawnych wartosci probek.
         ///////////
-        /*UnityEngine.Debug.Log("Finished at sample no. " + i);
-        short[] BUFFTEST = new short[length / sizeof(short)]; //Do przegladania w visualu
+        UnityEngine.Debug.Log("Finished at sample no. " + i);
+        /*short[] BUFFTEST = new short[length / sizeof(short)]; //Do przegladania w visualu
 
 
         for (i = 0; i < length / sizeof(short); i ++)
