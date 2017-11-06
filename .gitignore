@@ -33,3 +33,4 @@ sysinfo.txt
 *.apk
 *.unitypackage
 SoundGenerator/fmod.log
+SoundGenerator/fmod_editor.log
