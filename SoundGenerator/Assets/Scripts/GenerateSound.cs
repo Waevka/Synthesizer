@@ -19,9 +19,9 @@ public class GenerateSound : MonoBehaviour {
     FMOD.Sound generatedSound;
     int sampleRate = 44100;
     int channels = 2;
-    int soundLength = 5; //sec
+    int soundLength = 1; //sec
     bool sampleCreated = false; //temp
-    int frequency = 800; //Hz
+    public int frequency { get; set; } //Hz
     float volume = 0.2f; // 1-0
     int samplesGenerated = 0;
 
@@ -29,6 +29,8 @@ public class GenerateSound : MonoBehaviour {
 
     // Use this for initialization
     void Start () {
+
+        frequency = 800;
 
         //referencja do komponentow FMOD - wysokiego poziomu (studio) i niskiego
         studioSystem = FMODUnity.RuntimeManager.StudioSystem;
@@ -214,4 +216,5 @@ public class GenerateSound : MonoBehaviour {
     {
         return Mathf.Clamp(Mathf.Log10(linear) * 20.0f, -80.0f, 0.0f);
     }
+
 }
