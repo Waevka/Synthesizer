@@ -201,7 +201,7 @@ public class GenerateSound : MonoBehaviour {
             sampleVal = - 1.0f;
         } else
         {
-            sampleVal = (2.0d / position) - 1.0d;
+            sampleVal = (2.0d * position) - 1.0d;
         }
         return sampleVal * amplitude;
     }
@@ -293,7 +293,7 @@ public class GenerateSound : MonoBehaviour {
         //Testowanie ostatniej probki po skopiowaniu w dwie strony
         //Odkomentuj jezeli masz problem ze sprawdzeniem poprawnych wartosci probek.
         ///////////
-        UnityEngine.Debug.Log("Finished at sample no. " + i);
+        //UnityEngine.Debug.Log("Finished at sample no. " + i);
         /*short[] BUFFTEST = new short[length / sizeof(short)]; //Do przegladania w visualu
 
 

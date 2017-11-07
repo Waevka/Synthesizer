@@ -2036,7 +2036,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "Pi\u0142okszta\u0142tny"
+  m_Text: "Tr\xF3jk\u0105tny"
 --- !u!222 &1228513623
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -2898,7 +2898,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "Tr\xF3jk\u0105tny"
+  m_Text: "Pi\u0142okszta\u0142tny"
 --- !u!222 &2113815294
 CanvasRenderer:
   m_ObjectHideFlags: 0
