@@ -26,16 +26,22 @@ public class GenerateSound : MonoBehaviour {
     int soundLength = 1; //sec
     bool sampleCreated = false; //temp
     public int frequency { get; set; } //Hz
+    public float amplitude { get; set; } // 0 - 2, 1 is default
     float volume = 0.2f; // 1-0
     int samplesGenerated = 0;
     bool debugDrawFFT = true; //false - draw sample instead
 
-    LineRenderer lineRenderer;
+    LineRenderer lineRendererFFT;
+    [SerializeField]
+    GameObject lineRendererHolder;
+    LineRenderer lineRendererSamples;
+    float[] lineRendererSamplesData;
 
     // Use this for initialization
     void Start () {
 
         frequency = 800;
+        amplitude = 1.0f;
         sampleGenerator = GenerateSineSample;
 
         //referencja do komponentow FMOD - wysokiego poziomu (studio) i niskiego
@@ -50,11 +56,16 @@ public class GenerateSound : MonoBehaviour {
         FMODUnity.RuntimeManager.LowlevelSystem.createDSPByType(FMOD.DSP_TYPE.FFT, out fft);
         fft.setParameterInt((int)FMOD.DSP_FFT.WINDOWTYPE, (int)FMOD.DSP_FFT_WINDOW.HANNING);
         fft.setParameterInt((int)FMOD.DSP_FFT.WINDOWSIZE, windowSize * 2);
-        lineRenderer = gameObject.AddComponent<LineRenderer>();
-        lineRenderer.positionCount = windowSize;
-        lineRenderer.startWidth = 0.1f;
-        lineRenderer.endWidth = 0.1f;        
+        lineRendererFFT = gameObject.AddComponent<LineRenderer>();
+        lineRendererFFT.positionCount = windowSize;
+        lineRendererFFT.startWidth = 0.1f;
+        lineRendererFFT.endWidth = 0.1f;        
         channelGroup.addDSP(FMOD.CHANNELCONTROL_DSP_INDEX.HEAD, fft);
+
+        lineRendererSamples = lineRendererHolder.AddComponent<LineRenderer>();
+        lineRendererSamples.positionCount = sampleRate / 100;
+        lineRendererSamples.startWidth = 0.1f;
+        lineRendererSamples.endWidth = 0.1f;
 
         //Debug - sprawdzamy czy dobrze udalo nam sie zlapac kanal dzwiekowy (nie mamy jeszcze
         //obslugi bledow FMOD_OK)
@@ -106,7 +117,6 @@ public class GenerateSound : MonoBehaviour {
             FMOD.DSP_PARAMETER_FFT fftData =
                 (FMOD.DSP_PARAMETER_FFT)System.Runtime.InteropServices.Marshal.PtrToStructure(unmanagedData, typeof(FMOD.DSP_PARAMETER_FFT));
             var spectrum = fftData.spectrum;
-
             //UnityEngine.Debug.Log("Number of channels in track:" + fftData.numchannels);
 
             //Wrzucamy dane do linerenderera
@@ -123,15 +133,19 @@ public class GenerateSound : MonoBehaviour {
                     //Elementy tablicy spectrum zwracane sa w log dB
                     //TODO: fft w skali logarytmicznej a nie liniowej
                     float level = Lin2dB(spectrum[0][i]);
-                    pos.y = (80 + level) * height;
+                    pos.y = (80 + level) * height - 20;
 
-                    lineRenderer.SetPosition(i, pos);
+                    lineRendererFFT.SetPosition(i, pos);
                 }
             }
-        } else
-        {
-
         }
+
+        lineRendererSamples.positionCount = lineRendererSamplesData.Length;
+        for (int i = 0; i < lineRendererSamplesData.Length; i++)
+        {
+            lineRendererSamples.SetPosition(i, new Vector3(-40 + i * 0.5f, lineRendererSamplesData[i] -25, 0));
+        }
+
     }
 
     internal void SetWaveType(WaveType wavetype)
@@ -157,42 +171,53 @@ public class GenerateSound : MonoBehaviour {
 
     private double GenerateSineSample(double position)
     {
-        return Math.Sin(position * Math.PI * 2);
+        return Math.Sin(position * Math.PI * 2)*amplitude;
     }
 
     private double GenerateTriangleSample(double position)
     {
+        double sampleVal;
         if (position == 0)
         {
-            return -1.0f;
+            sampleVal = - 1.0f;
         } else if (position == 0.5d)
         {
-            return 1.0f;
+            sampleVal = 1.0f;
         } else if(position < 0.5)
         {
-            return (2.0d / (position*2)) - 1.0d;
+            sampleVal = (2.0d / (position*2)) - 1.0d;
         } else
         {
-            return (2.0d / (1.0d-(position*2))) - 1.0d; //not sure
+            sampleVal = (2.0d / (1.0d-(position*2))) - 1.0d; //not sure
         }
+        return sampleVal * amplitude;
     }
 
     private double GenerateSawSample(double position)
     {
-        if(position == 0)
+        double sampleVal;
+        if (position == 0)
         {
-            return -1.0f;
+            sampleVal = - 1.0f;
+        } else
+        {
+            sampleVal = (2.0d / position) - 1.0d;
         }
-        return (2.0d / position) - 1.0d;
+        return sampleVal * amplitude;
     }
 
     private double GenerateSquareSample(double position)
     {
+        double sampleVal;
         if (position < 0.5d)
         {
-            return 1.0d;
+            sampleVal = 1.0d;
         }
-        else return -1.0d;
+        else
+        {
+            sampleVal = -1.0d;
+        }
+        return sampleVal * amplitude;
     }
 
     void InitSampleGeneration()
@@ -223,6 +248,7 @@ public class GenerateSound : MonoBehaviour {
         //UnityEngine.Debug.Log("Samples length:" +  length + ", short size:" + sizeof(short));
         int i = 0;
         samplesGenerated = 0;
+        lineRendererSamplesData = new float[(int)(length / sizeof(short)) / 50];
 
         for (i = 0; i < length / sizeof(short); i += 2)
         {
@@ -251,6 +277,11 @@ public class GenerateSound : MonoBehaviour {
                 throw new NullReferenceException(ioore.Message);
             }
             samplesGenerated++;
+
+            if(samplesGenerated%50 == 0)
+            {
+                lineRendererSamplesData[samplesGenerated / 50] = (float)sampleGenerator(position - Math.Floor(position));
+            }
             //zamiana z -1 - 1 na zakres 16bit (+/-32767)
             //buffer
         }
