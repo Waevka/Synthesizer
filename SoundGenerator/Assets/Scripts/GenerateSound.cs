@@ -185,10 +185,10 @@ public class GenerateSound : MonoBehaviour {
             sampleVal = 1.0f;
         } else if(position < 0.5)
         {
-            sampleVal = (2.0d / (position*2)) - 1.0d;
+            sampleVal = (2.0d * (position*2)) - 1.0d;
         } else
         {
-            sampleVal = (2.0d / (1.0d-(position*2))) - 1.0d; //not sure
+            sampleVal = (2.0d * (2.0d-(position*2))) - 1.0d; //not sure
         }
         return sampleVal * amplitude;
     }
@@ -248,7 +248,8 @@ public class GenerateSound : MonoBehaviour {
         //UnityEngine.Debug.Log("Samples length:" +  length + ", short size:" + sizeof(short));
         int i = 0;
         samplesGenerated = 0;
-        lineRendererSamplesData = new float[(int)(length / sizeof(short)) / 50];
+        int lineRendererResolution = 5; // co ile probek dodajemy punkt do wykresu
+        lineRendererSamplesData = new float[(int)(length / sizeof(short)) / lineRendererResolution];
 
         for (i = 0; i < length / sizeof(short); i += 2)
         {
@@ -278,9 +279,9 @@ public class GenerateSound : MonoBehaviour {
             }
             samplesGenerated++;
 
-            if(samplesGenerated%50 == 0)
+            if(samplesGenerated% lineRendererResolution == 0)
             {
-                lineRendererSamplesData[samplesGenerated / 50] = (float)sampleGenerator(position - Math.Floor(position));
+                lineRendererSamplesData[samplesGenerated / lineRendererResolution] = (float)sampleGenerator(position - Math.Floor(position));
             }
             //zamiana z -1 - 1 na zakres 16bit (+/-32767)
             //buffer
