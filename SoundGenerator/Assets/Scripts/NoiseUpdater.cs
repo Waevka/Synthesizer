@@ -16,14 +16,4 @@ public class NoiseUpdater : MonoBehaviour
     {
 
     }
-
-    public void OnClickSquareButton()
-    {
-        UpdateWave(GenerateSound.WaveType.SQUARE);
-    }
-
-    public void UpdateWave(GenerateSound.WaveType wavetype)
-    {
-        soundGenerator.SetWaveType(wavetype);
-    }
 }
