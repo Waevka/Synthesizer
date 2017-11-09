@@ -1,15 +1,14 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using FMODUnity;
+﻿using UnityEngine;
 using FMOD;
 using System;
 
 public class GenerateSound : MonoBehaviour {
 
-    public enum WaveType {SINE, TRIANGLE, SAW, SQUARE};
+    public enum WaveType {SINE, TRIANGLE, SAW, SQUARE, WHITE_NOISE, PINK_NOISE};
     private delegate double GenerateSample(double position);
     GenerateSample sampleGenerator;
+    WaveType wave;
+    System.Random rand = new System.Random();
 
     FMOD.Studio.System studioSystem;
     FMOD.System lowlevelSystem;
@@ -39,7 +38,6 @@ public class GenerateSound : MonoBehaviour {
 
     // Use this for initialization
     void Start () {
-
         frequency = 800;
         amplitude = 1.0f;
         sampleGenerator = GenerateSineSample;
@@ -154,15 +152,27 @@ public class GenerateSound : MonoBehaviour {
         {
             case WaveType.SINE:
                 sampleGenerator = GenerateSineSample;
+                wave = WaveType.SINE;
                 break;
             case WaveType.TRIANGLE:
                 sampleGenerator = GenerateTriangleSample;
+                wave = WaveType.TRIANGLE;
                 break;
             case WaveType.SAW:
                 sampleGenerator = GenerateSawSample;
+                wave = WaveType.SAW;
                 break;
             case WaveType.SQUARE:
                 sampleGenerator = GenerateSquareSample;
+                wave = WaveType.SQUARE;
+                break;
+            case WaveType.WHITE_NOISE:
+                sampleGenerator = GenerateWhiteNoise;
+                wave = WaveType.WHITE_NOISE;
+                break;
+            case WaveType.PINK_NOISE:
+                sampleGenerator = GeneratePinkNoise;
+                wave = WaveType.PINK_NOISE;
                 break;
             default:
                 break;
@@ -220,6 +230,22 @@ public class GenerateSound : MonoBehaviour {
         return sampleVal * amplitude;
     }
 
+
+    private double WhiteNoise()
+    {
+        return rand.NextDouble() * 2.0d - 1.0d;
+    }
+
+    private double GenerateWhiteNoise(double position)
+    {
+        return position * WhiteNoise() * amplitude;
+    }
+
+    private double GeneratePinkNoise(double position)
+    {
+        return 0;
+    }
+
     void InitSampleGeneration()
     {
         soundInfo = new FMOD.CREATESOUNDEXINFO();
@@ -242,7 +268,7 @@ public class GenerateSound : MonoBehaviour {
         
     }
     private RESULT PCMReadCallbackImpl(IntPtr soundraw, IntPtr data, uint length)
-    {   
+    {
         //Tutaj przechowujemy probki
         short[] buffer = new short[length/sizeof(short)];
         //UnityEngine.Debug.Log("Samples length:" +  length + ", short size:" + sizeof(short));
@@ -253,8 +279,12 @@ public class GenerateSound : MonoBehaviour {
 
         for (i = 0; i < length / sizeof(short); i += 2)
         {
-            //obecna pozycja w probce
             double position = frequency * (double)samplesGenerated / (double)sampleRate;
+            //obecna pozycja w probce
+            if (wave <= WaveType.SQUARE)
+                position = frequency * (double)samplesGenerated / (double)sampleRate;
+            else
+                position = (rand.NextDouble() * 0.999d + 0.001d) * 20000 * (double)samplesGenerated / (double)sampleRate;
 
             try
             {

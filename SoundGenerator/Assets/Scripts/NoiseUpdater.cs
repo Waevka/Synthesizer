@@ -9,11 +9,17 @@ public class NoiseUpdater : MonoBehaviour
 
     public void OnClickWhiteNoiseButton()
     {
+        UpdateWave(GenerateSound.WaveType.WHITE_NOISE);
 
     }
 
     public void OnClickPinkNoiseButton()
     {
 
+    }
+
+    public void UpdateWave(GenerateSound.WaveType wavetype)
+    {
+        soundGenerator.SetWaveType(wavetype);
     }
 }
