@@ -15,7 +15,7 @@ public class NoiseUpdater : MonoBehaviour
 
     public void OnClickPinkNoiseButton()
     {
-
+        UpdateWave(GenerateSound.WaveType.PINK_NOISE);
     }
 
     public void UpdateWave(GenerateSound.WaveType wavetype)
