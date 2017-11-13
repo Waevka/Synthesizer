@@ -37,6 +37,12 @@ public class GenerateSound : MonoBehaviour {
     LineRenderer lineRendererSamples;
     float[] lineRendererSamplesData;
 
+    //Filters and effects - temp implementation
+    [SerializeField]
+    LowPassFilter lowPassFilter;
+    GameObject lowPassFilterGraphMarker;
+
+
     // Use this for initialization
     void Start () {
         frequency = 800;
@@ -65,6 +71,12 @@ public class GenerateSound : MonoBehaviour {
         lineRendererSamples.positionCount = sampleRate / 100;
         lineRendererSamples.startWidth = 0.1f;
         lineRendererSamples.endWidth = 0.1f;
+
+        lowPassFilterGraphMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        lowPassFilterGraphMarker.transform.position = new Vector3(0, lineRendererSamples.transform.position.y, 0.0f);
+        lowPassFilterGraphMarker.transform.localScale = new Vector3(0.5f, 5.0f, 0.5f);
+        lowPassFilterGraphMarker.SetActive(false);
+        lowPassFilterGraphMarker.GetComponent<Renderer>().material.color = Color.red;
 
         //Debug - sprawdzamy czy dobrze udalo nam sie zlapac kanal dzwiekowy (nie mamy jeszcze
         //obslugi bledow FMOD_OK)
@@ -100,8 +112,8 @@ public class GenerateSound : MonoBehaviour {
             channel.setMode(MODE.LOOP_NORMAL);
             channel.setPosition(0, TIMEUNIT.MS);
             channel.setPaused(false);
-        } 
-
+        }
+        lowPassFilterGraphMarker.SetActive(false);
     }
 
     // Update is called once per frame
@@ -139,10 +151,13 @@ public class GenerateSound : MonoBehaviour {
             }
         }
 
-        lineRendererSamples.positionCount = lineRendererSamplesData.Length;
-        for (int i = 0; i < lineRendererSamplesData.Length; i++)
+        if (sampleCreated)
         {
-            lineRendererSamples.SetPosition(i, new Vector3(-40 + i * 0.5f, lineRendererSamplesData[i] -25, 0));
+            lineRendererSamples.positionCount = lineRendererSamplesData.Length;
+            for (int i = 0; i < lineRendererSamplesData.Length; i++)
+            {
+                lineRendererSamples.SetPosition(i, new Vector3(-40 + i * 0.5f, lineRendererSamplesData[i] - 25, 0));
+            }
         }
 
     }
@@ -280,6 +295,7 @@ public class GenerateSound : MonoBehaviour {
         sampleCreated = true;
         
     }
+ 
     private RESULT PCMReadCallbackImpl(IntPtr soundraw, IntPtr data, uint length)
     {
         //Tutaj przechowujemy probki
@@ -307,8 +323,17 @@ public class GenerateSound : MonoBehaviour {
                 currentPtr, typeof(short));
 
                 //i - lewy kanal, i+1 - prawy
-                buffer[i] = (short)(sampleGenerator(position - Math.Floor(position)) * 32767.0f * volume);
-                buffer[i + 1] = (short)(sampleGenerator(position - Math.Floor(position)) * 32767.0f * volume);
+                double leftSample = sampleGenerator(position - Math.Floor(position)) * 32767.0f * volume;
+                double rightSample = sampleGenerator(position - Math.Floor(position)) * 32767.0f * volume;
+
+                if (lowPassFilter.IsFilterActive)
+                {
+                    leftSample = lowPassFilter.processSample(leftSample, frequency);
+                    rightSample = lowPassFilter.processSample(rightSample, frequency);
+                }
+
+                buffer[i] = (short)leftSample;
+                buffer[i + 1] = (short)rightSample;
             }
             catch (NullReferenceException nre) {
                 UnityEngine.Debug.Log("Samples broke at sample:" + i);
