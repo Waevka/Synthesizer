@@ -754,6 +754,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7263aff753f09bc40843d6a290a7a03b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  musicCube: {fileID: 320283895}
   xn: 0
   yn: 0
   xn1: 0

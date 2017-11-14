@@ -42,7 +42,7 @@ public class LowPassFilterUpdater : MonoBehaviour {
     public void lowPassIsEnabledUpdater(bool b)
     {
         Debug.Log("Updating low pass filter state, is enabled: " + b);
-        lowPassFilter.IsFilterActive = b;
+        lowPassFilter.SetIsFilterActive(b);
     }
 
     public void QValueUpdater(float q)

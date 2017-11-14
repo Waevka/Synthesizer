@@ -4,7 +4,7 @@ using System;
 
 public class GenerateSound : MonoBehaviour {
 
-    public enum WaveType {SINE, TRIANGLE, SAW, SQUARE, WHITE_NOISE, PINK_NOISE};
+    public enum WaveType { SINE, TRIANGLE, SAW, SQUARE, WHITE_NOISE, PINK_NOISE };
     private delegate double GenerateSample(double position);
     GenerateSample sampleGenerator;
     WaveType wave;
@@ -44,7 +44,7 @@ public class GenerateSound : MonoBehaviour {
 
 
     // Use this for initialization
-    void Start () {
+    void Start() {
         frequency = 800;
         amplitude = 1.0f;
         sampleGenerator = GenerateSineSample;
@@ -64,7 +64,7 @@ public class GenerateSound : MonoBehaviour {
         lineRendererFFT = gameObject.AddComponent<LineRenderer>();
         lineRendererFFT.positionCount = windowSize;
         lineRendererFFT.startWidth = 0.1f;
-        lineRendererFFT.endWidth = 0.1f;        
+        lineRendererFFT.endWidth = 0.1f;
         channelGroup.addDSP(FMOD.CHANNELCONTROL_DSP_INDEX.HEAD, fft);
 
         lineRendererSamples = lineRendererHolder.AddComponent<LineRenderer>();
@@ -94,7 +94,7 @@ public class GenerateSound : MonoBehaviour {
         sound.getName(out nametest, 20);
         UnityEngine.Debug.Log(nametest);
 
-        InitSampleGeneration();
+        //InitSampleGeneration();
 
         //debug
         if (sampleCreated)
@@ -117,7 +117,7 @@ public class GenerateSound : MonoBehaviour {
     }
 
     // Update is called once per frame
-    void Update () {
+    void Update() {
 
         IntPtr unmanagedData;
         uint length;
@@ -197,7 +197,7 @@ public class GenerateSound : MonoBehaviour {
 
     private double GenerateSineSample(double position)
     {
-        return Math.Sin(position * Math.PI * 2)*amplitude;
+        return Math.Sin(position * Math.PI * 2) * amplitude;
     }
 
     private double GenerateTriangleSample(double position)
@@ -205,16 +205,16 @@ public class GenerateSound : MonoBehaviour {
         double sampleVal;
         if (position == 0)
         {
-            sampleVal = - 1.0f;
+            sampleVal = -1.0f;
         } else if (position == 0.5d)
         {
             sampleVal = 1.0f;
-        } else if(position < 0.5)
+        } else if (position < 0.5)
         {
-            sampleVal = (2.0d * (position*2)) - 1.0d;
+            sampleVal = (2.0d * (position * 2)) - 1.0d;
         } else
         {
-            sampleVal = (2.0d * (2.0d-(position*2))) - 1.0d; //not sure
+            sampleVal = (2.0d * (2.0d - (position * 2))) - 1.0d; //not sure
         }
         return sampleVal * amplitude;
     }
@@ -224,7 +224,7 @@ public class GenerateSound : MonoBehaviour {
         double sampleVal;
         if (position == 0)
         {
-            sampleVal = - 1.0f;
+            sampleVal = -1.0f;
         } else
         {
             sampleVal = (2.0d * position) - 1.0d;
@@ -293,13 +293,13 @@ public class GenerateSound : MonoBehaviour {
         lowlevelSystem.setStreamBufferSize(65536, TIMEUNIT.RAWBYTES);
         lowlevelSystem.createStream("generatedSound", MODE.OPENUSER, ref soundInfo, out generatedSound);
         sampleCreated = true;
-        
+
     }
- 
+
     private RESULT PCMReadCallbackImpl(IntPtr soundraw, IntPtr data, uint length)
     {
         //Tutaj przechowujemy probki
-        short[] buffer = new short[length/sizeof(short)];
+        short[] buffer = new short[length / sizeof(short)];
         //UnityEngine.Debug.Log("Samples length:" +  length + ", short size:" + sizeof(short));
         int i = 0;
         samplesGenerated = 0;
@@ -325,13 +325,7 @@ public class GenerateSound : MonoBehaviour {
                 //i - lewy kanal, i+1 - prawy
                 double leftSample = sampleGenerator(position - Math.Floor(position)) * 32767.0f * volume;
                 double rightSample = sampleGenerator(position - Math.Floor(position)) * 32767.0f * volume;
-
-                if (lowPassFilter.IsFilterActive)
-                {
-                    leftSample = lowPassFilter.processSample(leftSample, frequency);
-                    rightSample = lowPassFilter.processSample(rightSample, frequency);
-                }
-
+                
                 buffer[i] = (short)leftSample;
                 buffer[i + 1] = (short)rightSample;
             }
@@ -347,7 +341,7 @@ public class GenerateSound : MonoBehaviour {
             }
             samplesGenerated++;
 
-            if(samplesGenerated% lineRendererResolution == 0)
+            if (samplesGenerated % lineRendererResolution == 0)
             {
                 lineRendererSamplesData[samplesGenerated / lineRendererResolution] = (float)sampleGenerator(position - Math.Floor(position));
             }
@@ -389,6 +383,11 @@ public class GenerateSound : MonoBehaviour {
     float Lin2dB(float linear)
     {
         return Mathf.Clamp(Mathf.Log10(linear) * 20.0f, -80.0f, 0.0f);
+    }
+
+    public FMOD.ChannelGroup getChannelGroup()
+    {
+        return channelGroup;
     }
 
 }
