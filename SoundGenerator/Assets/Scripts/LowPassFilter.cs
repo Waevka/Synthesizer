@@ -54,31 +54,24 @@ public class LowPassFilter : MonoBehaviour {
         //obecne probki
         xn[channelIndex] = sample;
 
-        if (channelIndex == 1)
-        {
-            s = Mathf.Sin((2 * Mathf.PI * CutOffFrequency) / (sampleFrequencyRange));
-            c = Mathf.Cos((2 * Mathf.PI * CutOffFrequency) / (sampleFrequencyRange));
-            alpha = s / (2 * QValue);
-            r = (1 / (1 + alpha));
+        s = Mathf.Sin((2 * Mathf.PI * CutOffFrequency) / (currentSampleRate));
+        c = Mathf.Cos((2 * Mathf.PI * CutOffFrequency) / (currentSampleRate));
+        alpha = s / (2 * QValue);
+        r = (1 / (1 + alpha));
 
-            a0 = 0.5f * (1 - c) * r;
-            a1 = (1 - c) * r;
-            a2 = a0;
-            b1 = -2 * c * r;
-            b2 = (1 - alpha) * r;
+        a0 = 0.5f * (1 - c) * r;
+        a1 = (1 - c) * r;
+        a2 = a0;
+        b1 = -2 * c * r;
+        b2 = (1 - alpha) * r;
 
-            yn[channelIndex] = (a0 * xn[channelIndex]) + (a1 * xn1[channelIndex]) + (a2 * xn2[channelIndex])
-                - (b1 * yn1[channelIndex]) - (b2 * yn2[channelIndex]);
-            yn[channelIndex] = Mathf.Clamp(yn[channelIndex] / 32767.0f, -1.0f, 1.0f);
-            if (yn[channelIndex] <= totalMin) totalMin = yn[channelIndex];
-            if (yn[channelIndex] >= totalMax) totalMax = yn[channelIndex];
-            //yn[channelIndex] *= 32767.0f;
-            yn[channelIndex] = sample * 0.2f;
-
-        } else
-        {
-            yn[channelIndex] = sample;
-        }
+        yn[channelIndex] = (a0 * xn[channelIndex]) + (a1 * xn1[channelIndex]) + (a2 * xn2[channelIndex])
+            - (b1 * yn1[channelIndex]) - (b2 * yn2[channelIndex]);
+        yn[channelIndex] = Mathf.Clamp(yn[channelIndex], -1.0f, 1.0f);
+        if (yn[channelIndex] <= totalMin) totalMin = yn[channelIndex];
+        if (yn[channelIndex] >= totalMax) totalMax = yn[channelIndex];
+        //yn[channelIndex] *= 32767.0f;
+        //yn[channelIndex] = sample * 0.2f;
 
         return yn[channelIndex];
     }
