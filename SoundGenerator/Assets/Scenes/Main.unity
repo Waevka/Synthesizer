@@ -755,12 +755,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   musicCube: {fileID: 320283895}
-  xn: 0
-  yn: 0
-  xn1: 0
-  xn2: 0
-  yn1: 0
-  yn2: 0
+  buffer:
+  - 0
+  currentSampleRate: 0
+  singleSampleRange: 0
+  coefficientsInitialized: 0
+  totalMax: 0
+  totalMin: 0
 --- !u!1 &334570699
 GameObject:
   m_ObjectHideFlags: 0
@@ -1335,7 +1336,7 @@ RectTransform:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 445116832}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -70, y: 0, z: 0}
+  m_LocalPosition: {x: -62.025314, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 1356391658}
@@ -3131,9 +3132,9 @@ MonoBehaviour:
   m_HandleRect: {fileID: 1394615357}
   m_Direction: 0
   m_MinValue: 0.5
-  m_MaxValue: 2
+  m_MaxValue: 40
   m_WholeNumbers: 0
-  m_Value: 0.5
+  m_Value: 5
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls:
@@ -3821,7 +3822,7 @@ RectTransform:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 1394615356}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -70, y: 0, z: 0}
+  m_LocalPosition: {x: -54.05063, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 200900319}
