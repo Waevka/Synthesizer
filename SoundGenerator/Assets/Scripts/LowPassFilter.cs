@@ -34,6 +34,7 @@ public class LowPassFilter : MonoBehaviour {
         description.read = myDSPCallback;
         FMODUnity.RuntimeManager.LowlevelSystem.createDSP(ref description, out lowPassFilterDSP);
         musicCube.getChannelGroup().addDSP(FMOD.CHANNELCONTROL_DSP_INDEX.HEAD, lowPassFilterDSP);
+        SetIsFilterActive(false);
     }
 
     public double processSample(double sample, int frequency)
@@ -90,36 +91,37 @@ public class LowPassFilter : MonoBehaviour {
 
     private RESULT myDSPCallback(ref DSP_STATE dsp_state, IntPtr inbuffer, IntPtr outbuffer, uint length, int inchannels, ref int outchannels)
     {
-        buffer = new float[length / sizeof(float)];
-        int i = 0;
+        buffer = new float[length * inchannels];
 
-        for (i = 0; i < length / sizeof(float); i++)
+        int i = 0;
+        try
         {
-            try
+            for (i = 0; i < length * inchannels; i++)
             {
+            
                 //test dostepu pamieci
                 var currentPtr = new IntPtr(inbuffer.ToInt32() + (i * sizeof(float)));
                 buffer[i] = (float)System.Runtime.InteropServices.Marshal.PtrToStructure(
                 currentPtr, typeof(float));
-                //buffer[i] *= 0.5f;
+                buffer[i] *= 0.5f; // test - zmniejszamy głośność
 
             }
-            catch (NullReferenceException nre)
-            {
-                UnityEngine.Debug.Log("Samples broke at sample:" + i);
-                throw new NullReferenceException(nre.Message);
-            }
 
-            catch (IndexOutOfRangeException ioore)
-            {
-                UnityEngine.Debug.Log("Samples broke at sample:" + i);
-                throw new NullReferenceException(ioore.Message);
-            }
+            //kopiujemy caly bufor do wskaznika data
+            System.Runtime.InteropServices.Marshal.Copy(buffer, 0, outbuffer, (int)length * inchannels);
+            outchannels = inchannels;
+        }
+        catch (NullReferenceException nre)
+        {
+            UnityEngine.Debug.Log("Samples broke at sample:" + i);
+            throw new NullReferenceException(nre.Message);
         }
 
-        //kopiujemy caly bufor do wskaznika data
-        System.Runtime.InteropServices.Marshal.Copy(buffer, 0, outbuffer, (int)(length / sizeof(float)));
-
+        catch (IndexOutOfRangeException ioore)
+        {
+            UnityEngine.Debug.Log("Samples broke at sample:" + i);
+            throw new NullReferenceException(ioore.Message);
+        }
         //test
         /*float[] BUFFTEST = new float[length / sizeof(float)]; //Do przegladania w visualu
 

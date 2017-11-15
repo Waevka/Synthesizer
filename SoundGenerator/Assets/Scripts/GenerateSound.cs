@@ -85,6 +85,10 @@ public class GenerateSound : MonoBehaviour {
         bool channelIsPlaying;
         channel.isPlaying(out channelIsPlaying);
         UnityEngine.Debug.Log(channelIsPlaying);
+        uint bl;
+        int numbuf;
+        lowlevelSystem.getDSPBufferSize(out bl, out numbuf);
+        UnityEngine.Debug.Log("DSP buffer size is: " + bl +", " + numbuf);
 
         //Wczytujemy i odtwarzamy testowy plik do obiektu 'sound'
         //Przypisujemy nasz kanal do tej samej grupy co glowny kanal dzwieku
