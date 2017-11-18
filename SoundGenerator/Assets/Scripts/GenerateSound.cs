@@ -39,8 +39,8 @@ public class GenerateSound : MonoBehaviour {
 
     //Filters and effects - temp implementation
     [SerializeField]
-    LowPassFilter lowPassFilter;
-    GameObject lowPassFilterGraphMarker;
+    FilterApplier filterApplier;
+    //GameObject lowPassFilterGraphMarker;
 
 
     // Use this for initialization
@@ -72,11 +72,11 @@ public class GenerateSound : MonoBehaviour {
         lineRendererSamples.startWidth = 0.1f;
         lineRendererSamples.endWidth = 0.1f;
 
-        lowPassFilterGraphMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        lowPassFilterGraphMarker.transform.position = new Vector3(0, lineRendererSamples.transform.position.y, 0.0f);
-        lowPassFilterGraphMarker.transform.localScale = new Vector3(0.5f, 5.0f, 0.5f);
-        lowPassFilterGraphMarker.SetActive(false);
-        lowPassFilterGraphMarker.GetComponent<Renderer>().material.color = Color.red;
+        //lowPassFilterGraphMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        //lowPassFilterGraphMarker.transform.position = new Vector3(0, lineRendererSamples.transform.position.y, 0.0f);
+        //lowPassFilterGraphMarker.transform.localScale = new Vector3(0.5f, 5.0f, 0.5f);
+        //lowPassFilterGraphMarker.SetActive(false);
+        //lowPassFilterGraphMarker.GetComponent<Renderer>().material.color = Color.red;
 
         //Debug - sprawdzamy czy dobrze udalo nam sie zlapac kanal dzwiekowy (nie mamy jeszcze
         //obslugi bledow FMOD_OK)
@@ -117,7 +117,19 @@ public class GenerateSound : MonoBehaviour {
             channel.setPosition(0, TIMEUNIT.MS);
             channel.setPaused(false);
         }
-        lowPassFilterGraphMarker.SetActive(false);
+        //lowPassFilterGraphMarker.SetActive(false);
+
+        InitFilters();
+        filterApplier.InitFilterApplier();
+    }
+
+    private void InitFilters()
+    {
+        FilterBase[] found = FindObjectsOfType<FilterBase>();
+        foreach(FilterBase f in found)
+        {
+            filterApplier.AddFilter(f);
+        }
     }
 
     // Update is called once per frame
