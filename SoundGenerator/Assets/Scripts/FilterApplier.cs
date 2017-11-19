@@ -6,7 +6,7 @@ using System;
 
 public class FilterApplier : MonoBehaviour {
 
-    private List<FilterBase> filters;
+    private SortedList<int, FilterBase> filters;
 
     FMOD.DSP DSPfilter;
     FMOD.DSP_DESCRIPTION description;
@@ -62,7 +62,8 @@ public class FilterApplier : MonoBehaviour {
                 //Dla tylko jednego filtru - przerabiamy probke i oddajemy
                 if (filters.Count > 0 && filters[0].isActive)
                 {
-                    sampleOutput = filters[0].ProcessSample(currentSample, (i / inchannels), (i % inchannels), currentSampleRate, inchannels);
+                    sampleOutput = filters[0].ProcessSample(
+                        currentSample, (i / inchannels), (i % inchannels), currentSampleRate, inchannels);
                 } else
                 {
                     sampleOutput = currentSample;
@@ -70,9 +71,10 @@ public class FilterApplier : MonoBehaviour {
                 //Gdy filtrow jest wiecej, nakladamy kazdy po kolei
                 if(filters.Count > 1)
                 {
-                    foreach(FilterBase filter in filters){
+                    foreach(KeyValuePair<int, FilterBase> filter in filters){
 
-                        sampleOutput = (filter.isActive ? filter.ProcessSample(sampleOutput, (i / inchannels), (i % inchannels), currentSampleRate, inchannels)
+                        sampleOutput = (filter.Value.isActive ? filter.Value.ProcessSample(
+                            sampleOutput, (i / inchannels), (i % inchannels), currentSampleRate, inchannels)
                             : sampleOutput);
                     }
                 }
@@ -121,9 +123,9 @@ public class FilterApplier : MonoBehaviour {
     {
         if (filters == null)
         {
-            filters = new List<FilterBase>();
+            filters = new SortedList<int, FilterBase>();
         }
-        filters.Insert(filter.filterIndex, filter);
+        filters.Add(filter.filterIndex, filter);
     }
 
 }
