@@ -19,12 +19,16 @@ public class LowPassFilter : FilterBase {
     float[] xn, yn, xn1, xn2, yn1, yn2;
     float s, c, alpha, r, a0, a1, a2, b1, b2;
 
+    private void Awake()
+    {
+        filterIndex = 0;
+    }
+
     // Use this for initialization
     void Start() {
         CutOffFrequency = 1000;
         QValue = 0.5f;
         SetIsFilterActive(false);
-        filterIndex = 0;
     }
 
     public override float ProcessSample(float sample, int sampleIndex, int channelIndex,

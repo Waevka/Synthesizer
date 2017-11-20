@@ -16,6 +16,11 @@ public class HighPassFilter : FilterBase {
     float[] xn, yn, xn1, xn2, yn1, yn2;
     float s, c, alpha, r, a0, a1, a2, b1, b2;
 
+    private void Awake()
+    {
+        filterIndex = 1;
+    }
+
     public override float ProcessSample(float sample, int sampleIndex, int channelIndex, float currentSampleRate, int totalChannels)
     {
         if (!coefficientsInitialized)
@@ -59,7 +64,6 @@ public class HighPassFilter : FilterBase {
         CutOffFrequency = 1000;
         QValue = 0.5f;
         SetIsFilterActive(false);
-        filterIndex = 1;
     }
 
     // Update is called once per frame

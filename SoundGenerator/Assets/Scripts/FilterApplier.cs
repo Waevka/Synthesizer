@@ -125,6 +125,8 @@ public class FilterApplier : MonoBehaviour {
         {
             filters = new SortedList<int, FilterBase>();
         }
+        UnityEngine.Debug.Log("Adding filter on position " + filter.filterIndex +
+            ", type of filter: " + filter);
         filters.Add(filter.filterIndex, filter);
     }
 
