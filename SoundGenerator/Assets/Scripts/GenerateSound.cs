@@ -21,7 +21,7 @@ public class GenerateSound : MonoBehaviour {
 
     FMOD.CREATESOUNDEXINFO soundInfo;
     FMOD.Sound generatedSound;
-    int sampleRate = 44100;
+    public int sampleRate = 44100;
     int channels = 2;
     int soundLength = 1; //sec
     bool sampleCreated = false; //temp
