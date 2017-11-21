@@ -46,6 +46,11 @@ public class EnvelopGenerator : FilterBase
         RValue = 0.25f;
     }
 
+    private void Awake()
+    {
+        filterIndex = 2;
+    }
+
     void Update()
     {
         Debug.Log("State: " + state);
