@@ -67,7 +67,10 @@ public class WahWahFilterUpdater : MonoBehaviour {
     }
     public void FrequencyValueUpdater(float q)
     {
-        FreqText.text = q.ToString();
+        if (FreqText != null)
+        {
+            FreqText.text = q.ToString();
+        }
         wahWahFilter.Frequency = q;
     }
 }

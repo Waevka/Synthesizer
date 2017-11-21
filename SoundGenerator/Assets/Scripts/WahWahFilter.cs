@@ -69,7 +69,7 @@ public class WahWahFilter : FilterBase
     {
         filterIndex = 3;
         CutOffFrequency = 300.0f;
-        FrequencyRange = 600.0f;
+        FrequencyRange = 1000.0f;
         Frequency = 1.0f;
         QValue = 2.0f;
     }

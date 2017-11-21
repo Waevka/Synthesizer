@@ -47,7 +47,10 @@ public class LowPassFilterUpdater : MonoBehaviour {
 
     public void QValueUpdater(float q)
     {
-        QValueText.text = q.ToString();
+        if (QValueText != null)
+        {
+            QValueText.text = q.ToString();
+        }
         lowPassFilter.QValue = q;
     }
 }
