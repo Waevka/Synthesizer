@@ -4,46 +4,96 @@ using UnityEngine.UI;
 public class EnvelopGenerator : FilterBase
 {
     public Button generator;
-    // Used as a scaler value to ensure output is in the range of [0, 1].
-    private const float Ceiling = 0.63212f;
-    // Used as a scaler to scale up time parameters.
-    private const int TimeScaler = 1;//3;
-    // Determines how the AdsrEnvelope responds to velocity.
-    private float velocitySensitivity = 0;
-    // Coefficients for calculating the AdsrEnvelope's output.
-    private float a0, b1;
+    private float output;
+    private float attackCoef;
+    private float decayCoef;
+    private float releaseCoef;
+    private float targetRatioAttack;
+    private float targetRatioDecayRelease;
+    private float attackBase;
+    private float decayBase;
+    private float releaseBase;
 
-    private enum State
+    public enum EnvelopeState
     {
+        Idle = 0,
         Attack,
         Decay,
-        Release,
-        Completed
-    }
+        Sustain,
+        Release
+    };
 
     // The AdsrEnvelope's current state.
-    private State state = State.Completed;
+    private EnvelopeState state = EnvelopeState.Idle;
 
-    public float AValue { get; set; }        // The attack time.
-    public float DValue { get; set; }        // The decay time.
-    public float SValue { get; set; }        // The sustain level.
-    public float RValue { get; set; }        // The release time
+    public float attackRate { get; set; }        // The attack time.
+    public float decayRate { get; set; }        // The decay time.
+    public float sustainLevel { get; set; }        // The sustain level.
+    public float releaseRate { get; set; }        // The release time
     public float amplitude { get { return musicCube.amplitude; } }       // The overall amplitude.
     public float sampleRate = 44100;      // The overall amplitude.
 
     [SerializeField]
     private GenerateSound musicCube;
 
-    float output = 1.0f;
+    /// <summary>
+    /// Attack Rate (seconds * SamplesPerSecond)
+    /// </summary>
+    public float AttackRate
+    {
+        get
+        {
+            return attackRate;
+        }
+        set
+        {
+            attackRate = value;
+            attackCoef = CalcCoef(value, targetRatioAttack);
+            attackBase = (1.0f + targetRatioAttack) * (1.0f - attackCoef);
+        }
+    }
+
+    /// <summary>
+    /// Decay Rate (seconds * SamplesPerSecond)
+    /// </summary>
+    public float DecayRate
+    {
+        get
+        {
+            return decayRate;
+        }
+        set
+        {
+            decayRate = value;
+            decayCoef = CalcCoef(value, targetRatioDecayRelease);
+            decayBase = (sustainLevel - targetRatioDecayRelease) * (1.0f - decayCoef);
+        }
+    }
+
+    /// <summary>
+    /// Release Rate (seconds * SamplesPerSecond)
+    /// </summary>
+    public float ReleaseRate
+    {
+        get
+        {
+            return releaseRate;
+        }
+        set
+        {
+            releaseRate = value;
+            releaseCoef = CalcCoef(value, targetRatioDecayRelease);
+            releaseBase = -targetRatioDecayRelease * (1.0f - releaseCoef);
+        }
+    }
 
     void Start()
     {
-        generator.onClick.AddListener(EnterRelease);
+        generator.onClick.AddListener(Release);
         SetIsFilterActive(false);
-        AValue = 0.0f;
-        DValue = 0.25f;
-        SValue = 0.0f;
-        RValue = 0.25f;
+        Reset();
+        SetTargetRatioAttack(0.3f);
+        SetTargetRatioDecayRelease(0.0001f);
     }
 
     private void Awake()
@@ -53,107 +103,140 @@ public class EnvelopGenerator : FilterBase
 
     void Update()
     {
-        Debug.Log("State: " + state);
-    }
-
-    public void StartAttack()
-    {
-        Debug.Log("Started Attack");
-        StartAttack(0.0f);
-    }
-
-    void EnterRelease()
-    {
-        Debug.Log("Entered Release");
-        Release(0.0f);
+        Debug.Log("output: " + output);
     }
 
     public override float ProcessSample(float sample, int sampleIndex, int channelIndex, float currentSampleRate, int totalChannels)
     {
-        switch(state)
+        Process();
+        if (state != EnvelopeState.Idle && output > 0.01f)
+            return sample * output;
+        else
+            return sample;
+    }
+
+    public void StartAttack()
+    {
+        Gate(true);
+        Debug.Log("Sate: " + state);
+    }
+
+    public void Release()
+    {
+        Gate(false);
+        Debug.Log("Sate: " + state);
+    }
+
+    private static float CalcCoef(float rate, float targetRatio)
+    {
+        return (float)System.Math.Exp(-System.Math.Log((1.0f + targetRatio) / targetRatio) / rate);
+    }
+
+    /// <summary>
+    /// Sustain Level (1 = 100%)
+    /// </summary>
+    public float SustainLevel
+    {
+        get
         {
-            case State.Attack:
-                output = a0 + b1 * output;
+            return sustainLevel;
+        }
+        set
+        {
+            sustainLevel = value;
+            decayBase = (sustainLevel - targetRatioDecayRelease) * (1.0f - decayCoef);
+        }
+    }
 
-                // If the end of the attack segment has been reached.
-                if (output >= Ceiling + 1.0f)
-                {
-                    //
-                    // Calculate coefficients for decay segment.
-                    //
-                    float d = DValue * TimeScaler * currentSampleRate + 1.0f;
-                    float x = (float)System.Math.Exp(-1.0f / d);
+    /// <summary>
+    /// Sets the attack curve
+    /// </summary>
+    void SetTargetRatioAttack(float targetRatio)
+    {
+        if (targetRatio < 0.000000001f)
+            targetRatio = 0.000000001f;  // -180 dB
+        targetRatioAttack = targetRatio;
+        attackBase = (1.0f + targetRatioAttack) * (1.0f - attackCoef);
+    }
 
-                    a0 = 1.0f - x;
-                    b1 = x;
+    /// <summary>
+    /// Sets the decay release curve
+    /// </summary>
+    void SetTargetRatioDecayRelease(float targetRatio)
+    {
+        if (targetRatio < 0.000000001f)
+            targetRatio = 0.000000001f;  // -180 dB
+        targetRatioDecayRelease = targetRatio;
+        decayBase = (sustainLevel - targetRatioDecayRelease) * (1.0f - decayCoef);
+        releaseBase = -targetRatioDecayRelease * (1.0f - releaseCoef);
+    }
 
-                    output = Ceiling + 1.0f;
-
-                    // Enter decay segment.
-                    state = State.Decay;
-                }
+    /// <summary>
+    /// Read the next volume multiplier from the envelope generator
+    /// </summary>
+    /// <returns>A volume multiplier</returns>
+    public float Process()
+    {
+        switch (state)
+        {
+            case EnvelopeState.Idle:
                 break;
-            case State.Decay:
-                output = a0 * SValue + b1 * output;
-                break;
-            case State.Release:
-                output = a0 + b1 * output;
-
-                // If the end of the release segment has been reached.
-                if (output < 1.0f)
+            case EnvelopeState.Attack:
+                output = attackBase + output * attackCoef;
+                if (output >= 1.0f)
                 {
                     output = 1.0f;
-
-                    state = State.Completed;
+                    state = EnvelopeState.Decay;
+                    Debug.Log("Sate: " + state);
                 }
                 break;
-            case State.Completed:
+            case EnvelopeState.Decay:
+                output = decayBase + output * decayCoef;
+                if (output <= sustainLevel)
+                {
+                    output = sustainLevel;
+                    state = EnvelopeState.Sustain;
+                    Debug.Log("Sate: " + state);
+                }
                 break;
-            default:
+            case EnvelopeState.Sustain:
                 break;
-        };
-
-        return (output - 1.0f) / Ceiling * amplitude;
+            case EnvelopeState.Release:
+                output = releaseBase + output * releaseCoef;
+                if (output <= 0.0)
+                {
+                    output = 0.0f;
+                    state = EnvelopeState.Idle;
+                    Debug.Log("Sate: " + state);
+                }
+                break;
+        }
+        return output;
     }
 
-    public void StartAttack(float velocity)
+    /// <summary>
+    /// Trigger the gate
+    /// </summary>
+    /// <param name="gate">If true, enter attack phase, if false enter release phase (unless already idle)</param>
+    public void Gate(bool gate)
     {
-        if ((state == State.Attack || state == State.Decay))
-        {
-            return;
-        }
-
-        //
-        // Calculate coefficients for the attack segment.
-        //
-        float d = AValue * TimeScaler * sampleRate + 1.0f;
-        float x = (float)System.Math.Exp(-1 / (AValue * TimeScaler * sampleRate));
-
-        a0 = (1.0f - x) * 2.0f;
-        b1 = x;
-
-        //amplitude = (float)System.Math.Pow((1 - velocitySensitivity) + velocity * velocitySensitivity, 2);
-
-        state = State.Attack;
+        if (gate)
+            state = EnvelopeState.Attack;
+        else if (state != EnvelopeState.Idle)
+            state = EnvelopeState.Release;
     }
 
-    public void Release(float velocity)
+    public EnvelopeState State
     {
-        if (state == State.Release || state == State.Completed)
+        get
         {
-            return;
+            return state;
         }
-
-        //
-        // Calculate coefficients for the release segment.
-        //
-        float d = RValue * TimeScaler * sampleRate + 1.0f;
-        float x = (float)System.Math.Exp(-1 / d);
-
-        a0 = (1.0f - x) * 0.9f;
-        b1 = x;
-
-        // Indicate that the AdsrEnvelope is in its release state.
-        state = State.Release;
+    }
+    
+    public void Reset()
+    {
+        state = EnvelopeState.Idle;
+        output = 0.0f;
     }
 }
