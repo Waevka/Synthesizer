@@ -103,7 +103,7 @@ public class EnvelopGenerator : FilterBase
 
     void Update()
     {
-        Debug.Log("output: " + output);
+        //Debug.Log("output: " + output);
     }
 
     public override float ProcessSample(float sample, int sampleIndex, int channelIndex, float currentSampleRate, int totalChannels)
