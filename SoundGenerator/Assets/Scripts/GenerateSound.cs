@@ -1,6 +1,15 @@
 ﻿using UnityEngine;
 using FMOD;
 using System;
+using UnityEngine;
+using System.Collections.Generic;
+using System.IO;
+using System.Xml.Serialization;
+using UnityEngine.UI;
+using UnityEngine.SceneManagement;
+using UnityEngine.EventSystems;
+using System;
+using System.Collections;
 
 public class GenerateSound : MonoBehaviour {
 
@@ -25,7 +34,7 @@ public class GenerateSound : MonoBehaviour {
     int channels = 2;
     int soundLength = 1; //sec
     bool sampleCreated = false; //temp
-    public int frequency { get; set; } //Hz
+    public float frequency { get; set; } //Hz
     public float amplitude { get; set; } // 0 - 2, 1 is default
     float volume = 0.2f; // 1-0
     int samplesGenerated = 0;
@@ -98,7 +107,9 @@ public class GenerateSound : MonoBehaviour {
         sound.getName(out nametest, 20);
         UnityEngine.Debug.Log(nametest);
 
-        //InitSampleGeneration();
+        //StartCatSong();
+
+        InitSampleGeneration();
 
         //debug
         if (sampleCreated)
@@ -108,8 +119,8 @@ public class GenerateSound : MonoBehaviour {
             channel.setMode(MODE.LOOP_NORMAL);
             channel.setPosition(0, TIMEUNIT.MS);
             channel.setPaused(false);
-
-        } else
+        }
+        else
         {
             lowlevelSystem.playSound(sound, channelGroup, true, out channel);
             channel.setLoopCount(-1);
@@ -122,6 +133,50 @@ public class GenerateSound : MonoBehaviour {
         InitFilters();
         filterApplier.InitFilterApplier();
     }
+
+    public void StartCatSong()
+    {
+        StartCoroutine(CatSong());
+    }
+
+    IEnumerator CatSong()
+    {
+        float time = 0.4f;
+        PlaySound(391.9f, time);
+        yield return new WaitForSecondsRealtime(time);
+        PlaySound(329.6f, time);
+        yield return new WaitForSecondsRealtime(time);
+        PlaySound(329.6f, time);
+        yield return new WaitForSecondsRealtime(time);
+        PlaySound(349.6f, time);
+        yield return new WaitForSecondsRealtime(time);
+        PlaySound(293.7f, time);
+        yield return new WaitForSecondsRealtime(time);
+        PlaySound(293.7f, time);
+        yield return new WaitForSecondsRealtime(time);
+        PlaySound(261.6f, 0.2f);
+        yield return new WaitForSecondsRealtime(0.2f);
+        PlaySound(329.6f, time);
+        yield return new WaitForSecondsRealtime(time);
+        PlaySound(391.9f, time);
+
+        yield return null;
+
+    }
+
+    void PlaySound(float frequency, float time)
+    {
+        InitGivenSampleGeneration(frequency, time);
+        PlayFMODSound();
+    }
+
+    void PlayFMODSound()
+    {
+        lowlevelSystem.playSound(generatedSound, channelGroup, false, out channel);
+        channel.setPosition(0, TIMEUNIT.MS);
+        channel.setPaused(false);
+    }
+
 
     private void InitFilters()
     {
@@ -309,7 +364,28 @@ public class GenerateSound : MonoBehaviour {
         lowlevelSystem.setStreamBufferSize(65536, TIMEUNIT.RAWBYTES);
         lowlevelSystem.createStream("generatedSound", MODE.OPENUSER, ref soundInfo, out generatedSound);
         sampleCreated = true;
+    }
 
+    void InitGivenSampleGeneration(float freq, float time)
+    {
+        frequency = freq;
+        soundInfo = new FMOD.CREATESOUNDEXINFO();
+        soundInfo.cbsize = System.Runtime.InteropServices.Marshal.SizeOf(soundInfo);
+        soundInfo.decodebuffersize = (uint)sampleRate;
+
+        // Sample rate * number of channels * bits per sample per channel * number of seconds
+        soundInfo.length = (uint)(sampleRate * channels * sizeof(short) * time);
+        //UnityEngine.Debug.Log(soundInfo.length);
+        soundInfo.numchannels = channels;
+        soundInfo.defaultfrequency = sampleRate;
+        soundInfo.format = SOUND_FORMAT.PCM16;
+        soundInfo.pcmreadcallback = PCMReadCallbackImpl;
+        soundInfo.pcmsetposcallback = PCMSetPosCallbackImpl;
+
+        //zwiekszenie bufora
+        lowlevelSystem.setStreamBufferSize(65536, TIMEUNIT.RAWBYTES);
+        lowlevelSystem.createStream("generatedSound", MODE.OPENUSER, ref soundInfo, out generatedSound);
+        sampleCreated = true;
     }
 
     private RESULT PCMReadCallbackImpl(IntPtr soundraw, IntPtr data, uint length)

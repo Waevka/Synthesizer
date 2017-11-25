@@ -34,7 +34,7 @@ public class FrequencyUpdater : MonoBehaviour {
         soundGenerator.frequency = freqToSet;
     }
 
-    public int GetUserFrequency()
+    public float GetUserFrequency()
     {
         return soundGenerator.frequency;
     }
