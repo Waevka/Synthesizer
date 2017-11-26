@@ -118,13 +118,11 @@ public class EnvelopGenerator : FilterBase
     public void StartAttack()
     {
         Gate(true);
-        Debug.Log("Sate: " + state);
     }
 
     public void Release()
     {
         Gate(false);
-        Debug.Log("Sate: " + state);
     }
 
     private static float CalcCoef(float rate, float targetRatio)
@@ -187,7 +185,6 @@ public class EnvelopGenerator : FilterBase
                 {
                     output = 1.0f;
                     state = EnvelopeState.Decay;
-                    Debug.Log("Sate: " + state);
                 }
                 break;
             case EnvelopeState.Decay:
@@ -196,7 +193,6 @@ public class EnvelopGenerator : FilterBase
                 {
                     output = sustainLevel;
                     state = EnvelopeState.Sustain;
-                    Debug.Log("Sate: " + state);
                 }
                 break;
             case EnvelopeState.Sustain:
@@ -207,7 +203,6 @@ public class EnvelopGenerator : FilterBase
                 {
                     output = 0.0f;
                     state = EnvelopeState.Idle;
-                    Debug.Log("Sate: " + state);
                 }
                 break;
         }

@@ -16,6 +16,7 @@ public class GenerateSound : MonoBehaviour {
     public enum WaveType { SINE, TRIANGLE, SAW, SQUARE, WHITE_NOISE, PINK_NOISE };
     private delegate double GenerateSample(double position);
     GenerateSample sampleGenerator;
+    GenerateSample sampleGenerator2;
     WaveType wave;
     double[] pinkNoiseBuffer = new double[7];
     System.Random rand = new System.Random();
@@ -24,12 +25,16 @@ public class GenerateSound : MonoBehaviour {
     FMOD.System lowlevelSystem;
 
     FMOD.Channel channel;
+    FMOD.Channel channel2forInstrument;
     FMOD.ChannelGroup channelGroup;
+    FMOD.ChannelGroup channelGroupforInstrument;
     FMOD.DSP fft;
     const int windowSize = 1024;
 
     FMOD.CREATESOUNDEXINFO soundInfo;
     FMOD.Sound generatedSound;
+    FMOD.CREATESOUNDEXINFO soundInfo2;
+    FMOD.Sound generatedSound2;
     public int sampleRate = 44100;
     int channels = 2;
     int soundLength = 1; //sec
@@ -50,13 +55,14 @@ public class GenerateSound : MonoBehaviour {
     [SerializeField]
     FilterApplier filterApplier;
     //GameObject lowPassFilterGraphMarker;
-
+    public Instrument instrument;
 
     // Use this for initialization
     void Start() {
         frequency = 800;
         amplitude = 1.0f;
         sampleGenerator = GenerateSineSample;
+        sampleGenerator2 = GenerateTriangleSample;
 
         //referencja do komponentow FMOD - wysokiego poziomu (studio) i niskiego
         studioSystem = FMODUnity.RuntimeManager.StudioSystem;
@@ -64,7 +70,9 @@ public class GenerateSound : MonoBehaviour {
 
         //odniesienie do glownego kanalu - do niego bedziemy przesylac nasz dzwiek
         channel = new Channel();
+        channel2forInstrument = new Channel();
         FMODUnity.RuntimeManager.LowlevelSystem.getMasterChannelGroup(out channelGroup);
+        FMODUnity.RuntimeManager.LowlevelSystem.getMasterChannelGroup(out channelGroupforInstrument);
 
         //inicjalizacja FFT (w FMODzie jako komponent DSP) i linerenderera do wyswietlania equalizera
         FMODUnity.RuntimeManager.LowlevelSystem.createDSPByType(FMOD.DSP_TYPE.FFT, out fft);
@@ -75,6 +83,7 @@ public class GenerateSound : MonoBehaviour {
         lineRendererFFT.startWidth = 0.1f;
         lineRendererFFT.endWidth = 0.1f;
         channelGroup.addDSP(FMOD.CHANNELCONTROL_DSP_INDEX.HEAD, fft);
+        channelGroupforInstrument.addDSP(FMOD.CHANNELCONTROL_DSP_INDEX.HEAD, fft);
 
         lineRendererSamples = lineRendererHolder.AddComponent<LineRenderer>();
         lineRendererSamples.positionCount = sampleRate / 100;
@@ -107,31 +116,36 @@ public class GenerateSound : MonoBehaviour {
         sound.getName(out nametest, 20);
         UnityEngine.Debug.Log(nametest);
 
-        //StartCatSong();
 
-        InitSampleGeneration();
+        //InitSampleGeneration();
 
         //debug
-        if (sampleCreated)
-        {
-            lowlevelSystem.playSound(generatedSound, channelGroup, false, out channel);
-            channel.setLoopCount(-1);
-            channel.setMode(MODE.LOOP_NORMAL);
-            channel.setPosition(0, TIMEUNIT.MS);
-            channel.setPaused(false);
-        }
-        else
-        {
-            lowlevelSystem.playSound(sound, channelGroup, true, out channel);
-            channel.setLoopCount(-1);
-            channel.setMode(MODE.LOOP_NORMAL);
-            channel.setPosition(0, TIMEUNIT.MS);
-            channel.setPaused(false);
-        }
+        //if (sampleCreated)
+        //{
+        //    lowlevelSystem.playSound(generatedSound, channelGroup, false, out channel);
+        //    channel.setLoopCount(-1);
+        //    channel.setMode(MODE.LOOP_NORMAL);
+        //    channel.setPosition(0, TIMEUNIT.MS);
+        //    channel.setPaused(false);
+        //}
+        //else
+        //{
+        //    lowlevelSystem.playSound(sound, channelGroup, true, out channel);
+        //    channel.setLoopCount(-1);
+        //    channel.setMode(MODE.LOOP_NORMAL);
+        //    channel.setPosition(0, TIMEUNIT.MS);
+        //    channel.setPaused(false);
+        //}
         //lowPassFilterGraphMarker.SetActive(false);
 
         InitFilters();
-        filterApplier.InitFilterApplier();
+        //filterApplier.InitFilterApplier();
+    }
+
+    public void StartInstrument()
+    {
+        StartCatSong();
+        instrument.InitFilterApplier();
     }
 
     public void StartCatSong()
@@ -141,27 +155,41 @@ public class GenerateSound : MonoBehaviour {
 
     IEnumerator CatSong()
     {
+        instrument.envelope.StartAttack();
         float time = 0.4f;
         PlaySound(391.9f, time);
         yield return new WaitForSecondsRealtime(time);
+        instrument.envelope.Release();
         PlaySound(329.6f, time);
         yield return new WaitForSecondsRealtime(time);
+        instrument.envelope.Release();
+        instrument.envelope.StartAttack();
         PlaySound(329.6f, time);
         yield return new WaitForSecondsRealtime(time);
+        instrument.envelope.Release();
         PlaySound(349.6f, time);
         yield return new WaitForSecondsRealtime(time);
+        instrument.envelope.Release();
+        instrument.envelope.StartAttack();
         PlaySound(293.7f, time);
         yield return new WaitForSecondsRealtime(time);
+        instrument.envelope.Release();
         PlaySound(293.7f, time);
         yield return new WaitForSecondsRealtime(time);
+        instrument.envelope.Release();
+        instrument.envelope.StartAttack();
         PlaySound(261.6f, 0.2f);
         yield return new WaitForSecondsRealtime(0.2f);
+        instrument.envelope.Release();
         PlaySound(329.6f, time);
         yield return new WaitForSecondsRealtime(time);
+        instrument.envelope.Release();
+        instrument.envelope.StartAttack();
         PlaySound(391.9f, time);
+        yield return new WaitForSecondsRealtime(time);
+        instrument.envelope.Release();
 
-        yield return null;
-
+        instrument.btn.interactable = true;
     }
 
     void PlaySound(float frequency, float time)
@@ -175,8 +203,10 @@ public class GenerateSound : MonoBehaviour {
         lowlevelSystem.playSound(generatedSound, channelGroup, false, out channel);
         channel.setPosition(0, TIMEUNIT.MS);
         channel.setPaused(false);
+        lowlevelSystem.playSound(generatedSound2, channelGroup, false, out channel2forInstrument);
+        channel2forInstrument.setPosition(0, TIMEUNIT.MS);
+        channel2forInstrument.setPaused(false);
     }
-
 
     private void InitFilters()
     {
@@ -385,6 +415,26 @@ public class GenerateSound : MonoBehaviour {
         //zwiekszenie bufora
         lowlevelSystem.setStreamBufferSize(65536, TIMEUNIT.RAWBYTES);
         lowlevelSystem.createStream("generatedSound", MODE.OPENUSER, ref soundInfo, out generatedSound);
+
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////
+        frequency = freq;
+        soundInfo2 = new FMOD.CREATESOUNDEXINFO();
+        soundInfo2.cbsize = System.Runtime.InteropServices.Marshal.SizeOf(soundInfo2);
+        soundInfo2.decodebuffersize = (uint)sampleRate;
+
+        // Sample rate * number of channels * bits per sample per channel * number of seconds
+        soundInfo2.length = (uint)(sampleRate * channels * sizeof(short) * time);
+        //UnityEngine.Debug.Log(soundInfo.length);
+        soundInfo2.numchannels = channels;
+        soundInfo2.defaultfrequency = sampleRate;
+        soundInfo2.format = SOUND_FORMAT.PCM16;
+        soundInfo2.pcmreadcallback = PCMReadCallbackImpl2;
+        soundInfo2.pcmsetposcallback = PCMSetPosCallbackImpl2;
+
+        //zwiekszenie bufora
+        lowlevelSystem.setStreamBufferSize(65536, TIMEUNIT.RAWBYTES);
+        lowlevelSystem.createStream("generatedSound", MODE.OPENUSER, ref soundInfo2, out generatedSound2);
+
         sampleCreated = true;
     }
 
@@ -472,6 +522,90 @@ public class GenerateSound : MonoBehaviour {
         return FMOD.RESULT.OK;
     }
 
+    private RESULT PCMReadCallbackImpl2(IntPtr soundraw, IntPtr data, uint length)
+    {
+        //Tutaj przechowujemy probki
+        short[] buffer = new short[length / sizeof(short)];
+        //UnityEngine.Debug.Log("Samples length:" +  length + ", short size:" + sizeof(short));
+        int i = 0;
+        samplesGenerated = 0;
+        int lineRendererResolution = 5; // co ile probek dodajemy punkt do wykresu
+        lineRendererSamplesData = new float[(int)(length / sizeof(short)) / lineRendererResolution];
+
+        for (i = 0; i < length / sizeof(short); i += 2)
+        {
+            double position = frequency * (double)samplesGenerated / (double)sampleRate;
+            //obecna pozycja w probce
+            if (wave <= WaveType.SQUARE)
+                position = frequency * (double)samplesGenerated / (double)sampleRate;
+            else
+                position = (rand.NextDouble() * 0.999d + 0.001d) * 20000 * (double)samplesGenerated / (double)sampleRate;
+
+            try
+            {
+                //test dostepu pamieci
+                var currentPtr = new IntPtr(data.ToInt32() + (i * sizeof(short)));
+                buffer[i] = (short)System.Runtime.InteropServices.Marshal.PtrToStructure(
+                currentPtr, typeof(short));
+
+                //i - lewy kanal, i+1 - prawy
+                double leftSample = sampleGenerator2(position - Math.Floor(position)) * 32767.0f * volume;
+                double rightSample = sampleGenerator2(position - Math.Floor(position)) * 32767.0f * volume;
+
+                buffer[i] = (short)leftSample;
+                buffer[i + 1] = (short)rightSample;
+            }
+            catch (NullReferenceException nre)
+            {
+                UnityEngine.Debug.Log("Samples broke at sample:" + i);
+                throw new NullReferenceException(nre.Message);
+            }
+
+            catch (IndexOutOfRangeException ioore)
+            {
+                UnityEngine.Debug.Log("Samples broke at sample:" + i);
+                throw new NullReferenceException(ioore.Message);
+            }
+            samplesGenerated++;
+
+            if (samplesGenerated % lineRendererResolution == 0)
+            {
+                lineRendererSamplesData[samplesGenerated / lineRendererResolution] = (float)sampleGenerator2(position - Math.Floor(position));
+            }
+            //zamiana z -1 - 1 na zakres 16bit (+/-32767)
+            //buffer
+        }
+
+        //kopiujemy caly bufor do wskaznika data
+        System.Runtime.InteropServices.Marshal.Copy(buffer, 0, data, (int)(length / 2));
+
+        ///////////
+        //Testowanie ostatniej probki po skopiowaniu w dwie strony
+        //Odkomentuj jezeli masz problem ze sprawdzeniem poprawnych wartosci probek.
+        ///////////
+        //UnityEngine.Debug.Log("Finished at sample no. " + i);
+        /*short[] BUFFTEST = new short[length / sizeof(short)]; //Do przegladania w visualu
+
+
+        for (i = 0; i < length / sizeof(short); i ++)
+        {
+            var currentPtr = new IntPtr(data.ToInt32() + (i * sizeof(short)));
+            BUFFTEST[i] = (short)System.Runtime.InteropServices.Marshal.PtrToStructure(
+                currentPtr, typeof(short));
+        }
+
+        int testPointerIndex = (int)(length / 4) - 1;
+        var currentPtr2 = new IntPtr(data.ToInt32() + (testPointerIndex * sizeof(short)));
+        var test = (short)System.Runtime.InteropServices.Marshal.PtrToStructure(
+        currentPtr2, typeof(short));
+        UnityEngine.Debug.Log("sample test: buffer[" + testPointerIndex + "] = " + test);*/
+
+        return FMOD.RESULT.OK;
+    }
+    private RESULT PCMSetPosCallbackImpl2(IntPtr soundraw, int subsound, uint position, TIMEUNIT postype)
+    {
+        return FMOD.RESULT.OK;
+    }
     float Lin2dB(float linear)
     {
         return Mathf.Clamp(Mathf.Log10(linear) * 20.0f, -80.0f, 0.0f);
@@ -480,6 +614,11 @@ public class GenerateSound : MonoBehaviour {
     public FMOD.ChannelGroup getChannelGroup()
     {
         return channelGroup;
+    }
+
+    public FMOD.ChannelGroup getChannelGroupForInstrument()
+    {
+        return channelGroupforInstrument;
     }
 
 }
