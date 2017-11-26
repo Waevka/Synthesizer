@@ -8,11 +8,13 @@ public class HelicopterFilter : FilterBase
 {
 
     public float CutOffFrequency { get; set; }
+    enum HelicopterRotor { First, Second }
     public float QValue { get; set; }
     [SerializeField]
     GenerateSound musicCube;
     private System.Random rand;
-    public float position;
+    public float firstRotorPosition;
+    public float secondRotorPosition;
     private float totalSamples;
     private float frequency; //LFO
     private bool coefficientsInitialized = false;
@@ -32,16 +34,16 @@ public class HelicopterFilter : FilterBase
     {   
         //if(channelIndex == 0 || channelIndex == 1)
         {
-            position = frequency * totalSamples / currentSampleRate;
+            firstRotorPosition = frequency * totalSamples / currentSampleRate;
+            secondRotorPosition = firstRotorPosition + 0.5f;
 
-            double firstSinWave = Math.Sin(position * Math.PI * 2);
-            double secondSinWave = Math.Sin(position * Math.PI * 2);
-            if(channelIndex == totalChannels -1) totalSamples++;
+            if (channelIndex == totalChannels - 1) totalSamples++;
             float s = WhiteNoise() * 0.3f;
             s = LowPassFilter(s, sampleIndex, channelIndex, currentSampleRate, totalChannels);
-            s = Delay(s, sampleIndex, channelIndex, currentSampleRate, totalChannels);
+            float s1 = Delay(s, HelicopterRotor.First, sampleIndex, channelIndex, currentSampleRate, totalChannels);
+            float s2 = Delay(s, HelicopterRotor.Second, sampleIndex, channelIndex, currentSampleRate, totalChannels);
 
-            return s;
+            return (s1 * 0.5f) + (s2 * 0.5f);
         }
         //else { return sample; }
     }
@@ -91,14 +93,22 @@ public class HelicopterFilter : FilterBase
         return yn[channelIndex];
     }
 
-    private float Delay(float sample, int sampleIndex, int channelIndex, float currentSampleRate, int totalChannels)
+    private float Delay(float sample, HelicopterRotor rotor, int sampleIndex, int channelIndex, float currentSampleRate, int totalChannels)
     {
         if (currentDelayBufferIndex >= maxDelayBufferIndex)
         {
             currentDelayBufferIndex = 0;
         }
 
-        offset = (delay / 2.0f) * (1 + (float)GenerateSineSample(position - Math.Floor(position)) * depth) * currentSampleRate;
+        if(rotor == HelicopterRotor.First)
+        {
+            offset = (delay / 2.0f) * (1 + (float)GenerateSineSample(firstRotorPosition - Math.Floor(firstRotorPosition)) * depth) * currentSampleRate;
+        } 
+        else if (rotor == HelicopterRotor.Second)
+        {
+            offset = (delay / 2.0f) * (1 + (float)GenerateSineSample(secondRotorPosition - Math.Floor(secondRotorPosition)) * depth) * currentSampleRate;
+        }
+
 
         offset = offset - (offset % totalChannels) + channelIndex;
         if (offset >= maxDelayBufferIndex)
@@ -148,7 +158,7 @@ public class HelicopterFilter : FilterBase
             UnityEngine.Debug.Log(nre.Message);
         }
         currentDelayBuffer[currentDelayBufferIndex] = sample;
-        currentDelayBufferIndex++;
+        if(rotor == HelicopterRotor.Second) currentDelayBufferIndex++;
 
         return sampleToReturn;
     }
@@ -161,11 +171,11 @@ public class HelicopterFilter : FilterBase
     {
         filterIndex = 8;
         rand = new System.Random();
-        frequency = 3.0f;
-        CutOffFrequency = 500;
-        QValue = 0.5f;
-        delay = 2.0f;
-        depth = 0.5f;
+        frequency = 5.0f;
+        CutOffFrequency = 300;
+        QValue = 5.0f;
+        delay = 0.5f;
+        depth = 0.8f;
     }
 
     // Update is called once per frame
