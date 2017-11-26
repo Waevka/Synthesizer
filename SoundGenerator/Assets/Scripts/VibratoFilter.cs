@@ -16,6 +16,7 @@ public class VibratoFilter : FilterBase {
     float delayBufferReader; //modulowany przez LFO
     public bool delayBufferInitialized = false;
     float currentSampleRate;
+    public int totalchannelofset;
 
     int totalSamples = 0;
     float position;
@@ -41,17 +42,26 @@ public class VibratoFilter : FilterBase {
             currentDelayBufferIndex = 0;
         }
 
-        position = frequency * totalSamples / currentSampleRate;
-        totalSamples++;
-        offset = (delay / 2.0f) * (1 + (float)GenerateSineSample(position - Math.Floor(position)) * depth) * currentSampleRate ;
+        float sampleToReturn = sample;
 
-        if(offset >= maxDelayBufferIndex)
-        {
-            offset = maxDelayBufferIndex - 1;
-        }
+        
+        position = frequency * totalSamples / currentSampleRate;
+        if(channelIndex == totalChannels-1) totalSamples++;
+        offset = ((delay / 2.0f) * (1 + (float)GenerateSineSample(position - Math.Floor(position)) * depth)) * currentSampleRate;
 
         //wyrownujemy offset do odpowiedniego channelu - jesli jestesmy na 2 to nie mozemy wziac probki z 5!
-        offset = offset - (offset % totalSamples) + channelIndex;
+        totalchannelofset = (int)offset%totalChannels;
+        offset = offset - (offset % totalChannels) + channelIndex;
+        
+
+        if (offset >= maxDelayBufferIndex)
+        {
+            offset = maxDelayBufferIndex - 1;
+        } else if (offset < 0)
+        {
+            offset = 0;
+        }
+
 
         delayBufferReader = currentDelayBufferIndex - offset;
 
@@ -67,7 +77,7 @@ public class VibratoFilter : FilterBase {
             delayBufferReader = delayBufferReader + maxDelayBufferIndex;
         }
 
-        float sampleToReturn = sample;
+        //float sampleToReturn = sample;
 
         try
         {
@@ -83,7 +93,7 @@ public class VibratoFilter : FilterBase {
             //interpolacja pomiedzy 2ma probkami
             float percent = delayBufferReader - (int)delayBufferReader;
 
-            sampleToReturn = Mathf.Clamp(firstInterpolatedSample + secondInterpolatedSample * percent,
+            sampleToReturn = Mathf.Clamp(firstInterpolatedSample + ((secondInterpolatedSample-firstInterpolatedSample) * percent),
                 -1.0f, 1.0f);
         } catch (NullReferenceException nre)
         {
@@ -91,6 +101,7 @@ public class VibratoFilter : FilterBase {
         }
         currentDelayBuffer[currentDelayBufferIndex] = sample;
         currentDelayBufferIndex++;
+        
 
         return sampleToReturn;
     }
