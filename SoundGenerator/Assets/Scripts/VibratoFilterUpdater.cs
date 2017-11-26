@@ -8,8 +8,12 @@ public class VibratoFilterUpdater : MonoBehaviour {
     VibratoFilter vibratoFilter;
     [SerializeField]
     Text delayText;
-	// Use this for initialization
-	void Start () {
+    [SerializeField]
+    Text depthText;
+    [SerializeField]
+    Text freqText;
+    // Use this for initialization
+    void Start () {
 		
 	}
 	
@@ -34,4 +38,20 @@ public class VibratoFilterUpdater : MonoBehaviour {
         }
     }
 
+    public void DepthValueUpdater(float d)
+    {
+        vibratoFilter.depth = d;
+        if (depthText != null)
+        {
+            depthText.text = (d*100).ToString() + "%";
+        }
+    }
+    public void FreqValueUpdater(float d)
+    {
+        vibratoFilter.frequency = d;
+        if (freqText != null)
+        {
+            freqText.text = d.ToString();
+        }
+    }
 }

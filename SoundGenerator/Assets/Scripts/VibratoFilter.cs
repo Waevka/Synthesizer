@@ -6,13 +6,27 @@ using UnityEngine;
 
 public class VibratoFilter : FilterBase {
     public float delay; // o tyle sekund chcemy opoznic dzwiek
+    public float depth;
+    public float frequency; //LFO frequency
     [SerializeField]
     private GenerateSound musicCube;
     float[] currentDelayBuffer;
     int currentDelayBufferIndex;
     int maxDelayBufferIndex;
+    float delayBufferReader; //modulowany przez LFO
     public bool delayBufferInitialized = false;
     float currentSampleRate;
+
+    int totalSamples = 0;
+    float position;
+    [SerializeField]
+    float offset;
+    [SerializeField]
+    float firstInterpolatedSample;
+    int firstInterpolatedSampleIndex;
+    [SerializeField]
+    float secondInterpolatedSample;
+    int secondInterpolatedSampleIndex;
 
     public override float ProcessSample(float sample, int sampleIndex, int channelIndex, float currentSampleRate, int totalChannels)
     {
@@ -27,7 +41,54 @@ public class VibratoFilter : FilterBase {
             currentDelayBufferIndex = 0;
         }
 
-        float sampleToReturn = Mathf.Clamp(sample + currentDelayBuffer[currentDelayBufferIndex], -1.0f, 1.0f);
+        position = frequency * totalSamples / currentSampleRate;
+        totalSamples++;
+        offset = (delay / 2.0f) * (1 + (float)GenerateSineSample(position - Math.Floor(position)) * depth) * currentSampleRate ;
+
+        if(offset >= maxDelayBufferIndex)
+        {
+            offset = maxDelayBufferIndex - 1;
+        }
+
+        //wyrownujemy offset do odpowiedniego channelu - jesli jestesmy na 2 to nie mozemy wziac probki z 5!
+        offset = offset - (offset % totalSamples) + channelIndex;
+
+        delayBufferReader = currentDelayBufferIndex - offset;
+
+        //sprawdzamy poprawnosc indeksu, czy na pewno miesci sie w indeksach tablicy
+        if(delayBufferReader >= 0)
+        {
+            if(delayBufferReader >= maxDelayBufferIndex)
+            {
+                delayBufferReader = delayBufferReader - maxDelayBufferIndex;
+            }
+        } else if (delayBufferReader < 0)
+        {
+            delayBufferReader = delayBufferReader + maxDelayBufferIndex;
+        }
+
+        float sampleToReturn = sample;
+
+        try
+        {
+            firstInterpolatedSampleIndex = (int)delayBufferReader;
+            firstInterpolatedSample = currentDelayBuffer[firstInterpolatedSampleIndex];
+
+            secondInterpolatedSampleIndex = ((int)delayBufferReader >= maxDelayBufferIndex - 1 - totalChannels ?
+                0 + sampleIndex % totalChannels
+                : (int)delayBufferReader + totalChannels);
+
+            secondInterpolatedSample = currentDelayBuffer[secondInterpolatedSampleIndex];
+
+            //interpolacja pomiedzy 2ma probkami
+            float percent = delayBufferReader - (int)delayBufferReader;
+
+            sampleToReturn = Mathf.Clamp(firstInterpolatedSample + secondInterpolatedSample * percent,
+                -1.0f, 1.0f);
+        } catch (NullReferenceException nre)
+        {
+            UnityEngine.Debug.Log(nre.Message);
+        }
         currentDelayBuffer[currentDelayBufferIndex] = sample;
         currentDelayBufferIndex++;
 
@@ -37,6 +98,8 @@ public class VibratoFilter : FilterBase {
     {
         filterIndex = 4;
         delay = 0.5f;
+        depth = 0.5f;
+        frequency = 3.0f;
     }
     // Use this for initialization
     void Start () {
@@ -44,7 +107,7 @@ public class VibratoFilter : FilterBase {
 	}
     private double GenerateSineSample(double position)
     {
-        return (Math.Sin(position * Math.PI * 2) + 1.0f) / 2.0f;
+        return (Math.Sin(position * Math.PI * 2));
     }
 
     // Update is called once per frame
