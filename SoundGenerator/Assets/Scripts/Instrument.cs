@@ -41,9 +41,9 @@ public class Instrument : MonoBehaviour
     {
         //jeden kanal
         wahwah = musicCube.GetComponent<WahWahFilter>();
-        wahwah.QValue = 0.5f;
+        wahwah.QValue = 1.5f;
         wahwah.CutOffFrequency = 300.0f;
-        wahwah.FrequencyRange = 00.0f;
+        wahwah.FrequencyRange = 800.0f;
         lowpass = musicCube.GetComponent<LowPassFilter>();
         lowpass.CutOffFrequency = 400.0f;
         lowpass.QValue = 0.5f;
@@ -62,43 +62,43 @@ public class Instrument : MonoBehaviour
         bandpass.centreFrequency = 350.0f;
         bandpass.q = 0.4f;
         bandpass.BandPassFilterConstantPeakGain();
-        //vibrato = musicCube.GetComponent<VibratoFilter>();
-        //vibrato.delay = 0.1f;
+        vibrato = musicCube.GetComponent<VibratoFilter>();
+        vibrato.delay = 0.2f;
+        vibrato.depth = 0.03f;
+        vibrato.frequency = 0.8f;
     }
 
 
     public void InitFilterApplier()
     {
-        if (initialized)
-            return;
-
         //musimy zainicjalizowac tutaj, po rozpoczeciu odgrywania dzwieku w channelGroupie
         //inaczej blad
         description = new FMOD.DSP_DESCRIPTION();
         description.read = myDSPCallback;
         FMODUnity.RuntimeManager.LowlevelSystem.createDSP(ref description, out DSPfilter);
         DSPfilter.setBypass(false);
-        FMOD.RESULT r = musicCube.getChannelGroup().addDSP(FMOD.CHANNELCONTROL_DSP_INDEX.HEAD, DSPfilter);
+        FMOD.RESULT r = musicCube.getChannelGroupForInstrument1().addDSP(FMOD.CHANNELCONTROL_DSP_INDEX.HEAD, DSPfilter);
         UnityEngine.Debug.Log(r);
         Channel c;
-        musicCube.getChannelGroup().getChannel(0, out c);
+        musicCube.getChannelGroupForInstrument1().getChannel(0, out c);
         c.getFrequency(out currentSampleRate);
 
         description2 = new FMOD.DSP_DESCRIPTION();
         description2.read = myDSPCallback2;
         FMODUnity.RuntimeManager.LowlevelSystem.createDSP(ref description2, out DSPfilter2);
         DSPfilter2.setBypass(false);
-        FMOD.RESULT r2 = musicCube.getChannelGroupForInstrument().addDSP(FMOD.CHANNELCONTROL_DSP_INDEX.HEAD, DSPfilter2);
+        FMOD.RESULT r2 = musicCube.getChannelGroupForInstrument2().addDSP(FMOD.CHANNELCONTROL_DSP_INDEX.HEAD, DSPfilter2);
         UnityEngine.Debug.Log(r2);
         Channel c2;
-        musicCube.getChannelGroupForInstrument().getChannel(0, out c2);
+        musicCube.getChannelGroupForInstrument2().getChannel(0, out c2);
         c2.getFrequency(out currentSampleRate);
-
-        initialized = true;
+        
     }
 
     private RESULT myDSPCallback(ref DSP_STATE dsp_state, IntPtr inbuffer, IntPtr outbuffer, uint length, int inchannels, ref int outchannels)
     {
+        if (btn.interactable)
+            return RESULT.OK;
         buffer = new float[length * inchannels];
         singleSampleRange = ((currentSampleRate / 2) / length); // nyquist
         float currentSample;
@@ -143,6 +143,8 @@ public class Instrument : MonoBehaviour
 
     private RESULT myDSPCallback2(ref DSP_STATE dsp_state, IntPtr inbuffer, IntPtr outbuffer, uint length, int inchannels, ref int outchannels)
     {
+        if (btn.interactable)
+            return RESULT.OK;
         buffer = new float[length * inchannels];
         singleSampleRange = ((currentSampleRate / 2) / length); // nyquist
         float currentSample;
@@ -163,8 +165,8 @@ public class Instrument : MonoBehaviour
                             currentSample, (i / inchannels), (i % inchannels), currentSampleRate, inchannels);
                 sampleOutput = highpass.ProcessSample(
                             sampleOutput, (i / inchannels), (i % inchannels), currentSampleRate, inchannels);
-                //sampleOutput = vibrato.ProcessSample(
-                //            sampleOutput, (i / inchannels), (i % inchannels), currentSampleRate, inchannels);
+                sampleOutput = vibrato.ProcessSample(
+                            sampleOutput, (i / inchannels), (i % inchannels), currentSampleRate, inchannels);
 
 
                 buffer[i] = sampleOutput;

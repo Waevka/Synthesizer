@@ -78,7 +78,7 @@ public class FilterApplier : MonoBehaviour {
                             : sampleOutput);
                     }
                 }
-
+                
                 buffer[i] = sampleOutput;
 
                 if (currentSample <= totalMinBuff) totalMinBuff = currentSample;
