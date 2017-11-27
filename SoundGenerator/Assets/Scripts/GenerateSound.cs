@@ -26,8 +26,10 @@ public class GenerateSound : MonoBehaviour {
 
     FMOD.Channel channel;
     FMOD.Channel channel2forInstrument;
+    FMOD.Channel channel3forSoundFile;
     FMOD.ChannelGroup channelGroup;
     FMOD.ChannelGroup channelGroupforInstrument;
+    FMOD.ChannelGroup channelGroupforSoundFile;
     FMOD.DSP fft;
     const int windowSize = 1024;
 
@@ -71,8 +73,10 @@ public class GenerateSound : MonoBehaviour {
         //odniesienie do glownego kanalu - do niego bedziemy przesylac nasz dzwiek
         channel = new Channel();
         channel2forInstrument = new Channel();
+        channel3forSoundFile = new Channel();
         FMODUnity.RuntimeManager.LowlevelSystem.getMasterChannelGroup(out channelGroup);
         FMODUnity.RuntimeManager.LowlevelSystem.getMasterChannelGroup(out channelGroupforInstrument);
+        FMODUnity.RuntimeManager.LowlevelSystem.getMasterChannelGroup(out channelGroupforSoundFile);
 
         //inicjalizacja FFT (w FMODzie jako komponent DSP) i linerenderera do wyswietlania equalizera
         FMODUnity.RuntimeManager.LowlevelSystem.createDSPByType(FMOD.DSP_TYPE.FFT, out fft);
@@ -84,6 +88,7 @@ public class GenerateSound : MonoBehaviour {
         lineRendererFFT.endWidth = 0.1f;
         channelGroup.addDSP(FMOD.CHANNELCONTROL_DSP_INDEX.HEAD, fft);
         channelGroupforInstrument.addDSP(FMOD.CHANNELCONTROL_DSP_INDEX.HEAD, fft);
+        channelGroupforSoundFile.addDSP(FMOD.CHANNELCONTROL_DSP_INDEX.HEAD, fft);
 
         lineRendererSamples = lineRendererHolder.AddComponent<LineRenderer>();
         lineRendererSamples.positionCount = sampleRate / 100;
@@ -117,29 +122,29 @@ public class GenerateSound : MonoBehaviour {
         UnityEngine.Debug.Log(nametest);
 
 
-        //InitSampleGeneration();
+        InitSampleGeneration();
 
         //debug
-        //if (sampleCreated)
+        // (sampleCreated)
         //{
-        //    lowlevelSystem.playSound(generatedSound, channelGroup, false, out channel);
-        //    channel.setLoopCount(-1);
-        //    channel.setMode(MODE.LOOP_NORMAL);
-        //    channel.setPosition(0, TIMEUNIT.MS);
-        //    channel.setPaused(false);
+            lowlevelSystem.playSound(generatedSound, channelGroup, true, out channel);
+            channel.setLoopCount(-1);
+            channel.setMode(MODE.LOOP_NORMAL);
+            channel.setPosition(0, TIMEUNIT.MS);
+            channel.setPaused(true);
         //}
         //else
         //{
-        //    lowlevelSystem.playSound(sound, channelGroup, true, out channel);
-        //    channel.setLoopCount(-1);
-        //    channel.setMode(MODE.LOOP_NORMAL);
-        //    channel.setPosition(0, TIMEUNIT.MS);
-        //    channel.setPaused(false);
+            lowlevelSystem.playSound(sound, channelGroupforSoundFile, true, out channel3forSoundFile);
+            channel3forSoundFile.setLoopCount(-1);
+            channel3forSoundFile.setMode(MODE.LOOP_NORMAL);
+            channel3forSoundFile.setPosition(0, TIMEUNIT.MS);
+            channel3forSoundFile.setPaused(false);
         //}
         //lowPassFilterGraphMarker.SetActive(false);
 
         InitFilters();
-        //filterApplier.InitFilterApplier();
+        filterApplier.InitFilterApplier();
     }
 
     public void StartInstrument()
@@ -257,7 +262,13 @@ public class GenerateSound : MonoBehaviour {
             lineRendererSamples.positionCount = lineRendererSamplesData.Length;
             for (int i = 0; i < lineRendererSamplesData.Length; i++)
             {
-                lineRendererSamples.SetPosition(i, new Vector3(-40 + i * 0.5f, lineRendererSamplesData[i] - 25, 0));
+                try
+                {
+                    lineRendererSamples.SetPosition(i, new Vector3(-40 + i * 0.5f, lineRendererSamplesData[i] - 25, 0));
+                } catch (IndexOutOfRangeException ex)
+                {
+                    UnityEngine.Debug.Log("Oops xD" + ex.Message);
+                }
             }
         }
 
@@ -346,7 +357,6 @@ public class GenerateSound : MonoBehaviour {
         }
         return sampleVal * amplitude;
     }
-
 
     private double WhiteNoise()
     {
@@ -619,6 +629,12 @@ public class GenerateSound : MonoBehaviour {
     public FMOD.ChannelGroup getChannelGroupForInstrument()
     {
         return channelGroupforInstrument;
+    }
+
+    public void setGeneratorEnabled(bool isGeneratorOn)
+    {
+        channel.setPaused(isGeneratorOn);
+        channel3forSoundFile.setPaused(!isGeneratorOn);
     }
 
 }
